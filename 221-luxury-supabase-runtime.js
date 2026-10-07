@@ -3,7 +3,7 @@
   if (window.__221LUXURY_SUPABASE_RUNTIME__) return;
   window.__221LUXURY_SUPABASE_RUNTIME__ = true;
 
-  const CONFIG_SRC = './supabase-config.js';
+  const CONFIG_SRC = '/supabase-config.js?v=public-build-1';
   const SUPABASE_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const BUCKET = 'product-images';
   const STORE_SLUG = '221-luxury';
