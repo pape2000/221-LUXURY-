@@ -103,21 +103,53 @@
     }catch(e){ console.error('221 LUXURY Supabase repaint error',e); }
   }
 
+  async function fetchAndApply(client){
+    const storeResult=await client.from('stores').select('id,slug,is_active').eq('slug',STORE_SLUG).eq('is_active',true).maybeSingle();
+    if(storeResult.error) throw storeResult.error;
+    if(!storeResult.data){ console.warn('221 LUXURY: store not created yet; keeping current catalog.'); return; }
+
+    const result=await client.from('products').select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)').eq('store_id',storeResult.data.id).eq('published',true).order('created_at',{ascending:false});
+    if(result.error) throw result.error;
+    if(typeof PRODUCTS==='undefined' || !Array.isArray(PRODUCTS)) return;
+    const next=(result.data||[]).map(function(row){return normalize(row,client);});
+    PRODUCTS.splice(0,PRODUCTS.length,...next);
+    repaint();
+    document.documentElement.dataset.supabaseCatalog='ready';
+    return next;
+  }
+
   async function init(){
     try{
       await loadScript(CONFIG_SRC);
       await loadScript(SUPABASE_SRC);
       const client=buildClient();
-      const storeResult=await client.from('stores').select('id,slug,is_active').eq('slug',STORE_SLUG).eq('is_active',true).maybeSingle();
-      if(storeResult.error) throw storeResult.error;
-      if(!storeResult.data){ console.warn('221 LUXURY: store not created yet; keeping current catalog.'); return; }
-      const result=await client.from('products').select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)').eq('store_id',storeResult.data.id).eq('published',true).order('created_at',{ascending:false});
-      if(result.error) throw result.error;
-      if(typeof PRODUCTS==='undefined' || !Array.isArray(PRODUCTS)) return;
-      const next=(result.data||[]).map(function(row){return normalize(row,client);});
-      PRODUCTS.splice(0,PRODUCTS.length,...next);
-      repaint();
-      document.documentElement.dataset.supabaseCatalog='ready';
+      await fetchAndApply(client);
+
+      let refreshTimer=null;
+      let refreshing=false;
+      const scheduleRefresh=function(){
+        clearTimeout(refreshTimer);
+        refreshTimer=setTimeout(async function(){
+          if(refreshing) return;
+          refreshing=true;
+          try{ await fetchAndApply(client); }
+          catch(e){ console.error('221 LUXURY Supabase live refresh failed',e); }
+          finally{ refreshing=false; }
+        },700);
+      };
+
+      const channel=client.channel('221-luxury-public-catalog')
+        .on('postgres_changes',{event:'*',schema:'public',table:'products'},scheduleRefresh)
+        .on('postgres_changes',{event:'*',schema:'public',table:'product_colors'},scheduleRefresh)
+        .on('postgres_changes',{event:'*',schema:'public',table:'product_variants'},scheduleRefresh)
+        .on('postgres_changes',{event:'*',schema:'public',table:'product_images'},scheduleRefresh)
+        .subscribe(function(status){
+          if(status!=='SUBSCRIBED') console.warn('221 LUXURY realtime status:',status);
+        });
+
+      window.addEventListener('beforeunload',function(){
+        try{ client.removeChannel(channel); }catch(e){}
+      },{once:true});
     }catch(e){
       console.error('221 LUXURY Supabase catalog load failed',e);
     }
