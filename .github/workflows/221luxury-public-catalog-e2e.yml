@@ -61,7 +61,10 @@ jobs:
             const errors=[];
             page.on('pageerror',e=>errors.push('pageerror: '+(e.stack||e.message||String(e))));
             page.on('console',m=>{if(m.type()==='error') errors.push('console: '+m.text());});
-            page.on('response',r=>{if(r.status()>=500) errors.push('HTTP '+r.status()+' '+r.url());});
+            page.on('response',r=>{
+              if(r.status()>=400) errors.push('HTTP '+r.status()+' '+r.url());
+            });
+            page.on('requestfailed',r=>errors.push('REQUEST_FAILED '+r.url()+' '+r.failure()?.errorText));
 
             await page.goto(process.env.PUBLIC_URL+'?e2e=live', {waitUntil:'domcontentloaded',timeout:120000});
 
