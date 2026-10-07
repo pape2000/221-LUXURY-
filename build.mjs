@@ -66,7 +66,9 @@ const runtimeTags=[
   '<script src="/221-luxury-supabase-runtime.js?v=public-build-10"></script>'
 ].join('\n');
 
-publicHtml=publicHtml.replace('</body>',runtimeTags+'\n</body>');
+const bodyIndex=publicHtml.lastIndexOf('</body>');
+if(bodyIndex<0) throw new Error('</body> not found');
+publicHtml=publicHtml.slice(0,bodyIndex)+runtimeTags+'\n'+publicHtml.slice(bodyIndex);
 
 fs.writeFileSync(path.join(DIST,'index.html'),publicHtml,'utf8');
 fs.writeFileSync(path.join(DIST,'static-index.html'),original,'utf8');
