@@ -1,0 +1,82 @@
+name: 221 LUXURY - public catalog e2e
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - static-index.html
+      - 221-luxury-public-shell.html
+      - 221-luxury-supabase-runtime.js
+      - supabase-config.js
+      - vercel.json
+      - .github/workflows/221luxury-public-catalog-e2e.yml
+
+jobs:
+  public-catalog:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Chromium
+        run: npx --yes playwright@1.55.0 install --with-deps chromium
+
+      - name: Verify public catalog
+        env:
+          PUBLIC_URL: https://221-luxury-beige.vercel.app/
+          SUPABASE_URL: https://shvgcroqovnhltpzceid.supabase.co
+          SUPABASE_KEY: sb_publishable_t3OcJB8q9BXNcMX2Wt0ngw_xvoms06r
+          STORE_ID: d818f4a0-6d7c-4873-9032-6c2d68aa3386
+        run: |
+          node <<'NODE'
+          const { chromium } = require('playwright');
+          const base = process.env.SUPABASE_URL;
+          const key = process.env.SUPABASE_KEY;
+          const store = process.env.STORE_ID;
+          const headers = { apikey: key, Authorization: 'Bearer ' + key };
+
+          async function api(path) {
+            const r = await fetch(base + path, { headers, cache: 'no-store' });
+            if (!r.ok) throw new Error('Supabase HTTP ' + r.status + ': ' + await r.text());
+            return r.json();
+          }
+
+          (async()=>{
+            const rows = await api('/rest/v1/products?select=slug,name,price,stock,updated_at&store_id=eq.' + store + '&published=eq.true&order=created_at.desc');
+            if(!rows.length) throw new Error('Supabase returned zero published products.');
+            const browser = await chromium.launch({headless:true});
+            const page = await browser.newPage({ viewport:{width:390,height:844}, deviceScaleFactor:1 });
+            page.on('console', msg => {
+              if(msg.type()==='error') console.error('[browser]', msg.text());
+            });
+
+            await page.goto(process.env.PUBLIC_URL, {waitUntil:'domcontentloaded', timeout:120000});
+            await page.waitForFunction(() => document.documentElement.dataset.supabaseCatalog === 'ready', {timeout:120000});
+
+            const latest = rows[0];
+            await page.goto(process.env.PUBLIC_URL + '#/shop', {waitUntil:'domcontentloaded', timeout:120000});
+            await page.waitForFunction(expected => {
+              const cards = document.querySelectorAll('#shopGrid .product-card').length;
+              return cards === expected;
+            }, rows.length, {timeout:120000});
+
+            const result = await page.evaluate((latest) => ({
+              cardCount: document.querySelectorAll('#shopGrid .product-card').length,
+              latestNameFound: [...document.querySelectorAll('#shopGrid .product-name')].some(el => el.textContent.trim() === latest.name),
+              supabaseReady: document.documentElement.dataset.supabaseCatalog === 'ready',
+              liveImages: [...document.querySelectorAll('#shopGrid .product-media img')].slice(0,4).every(img => img.src.includes('/storage/v1/object/public/product-images/'))
+            }), latest);
+
+            if(!result.supabaseReady) throw new Error('Public page did not reach Supabase-ready state.');
+            if(result.cardCount !== rows.length) throw new Error('Public card count '+result.cardCount+' != Supabase '+rows.length+'.');
+            if(!result.latestNameFound) throw new Error('Latest Supabase product is not visible in public shop.');
+            if(!result.liveImages) throw new Error('Public product images are not using Supabase Storage.');
+
+            console.log(JSON.stringify({ok:true,supabasePublishedProducts:rows.length,...result}));
+            await browser.close();
+          })().catch(err => { console.error(err); process.exit(1); });
+          NODE
