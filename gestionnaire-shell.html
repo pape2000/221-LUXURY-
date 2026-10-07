@@ -15,7 +15,7 @@
     const injection =
       '<script src="/supabase-config.js"><\/script>' +
       '<script src="/221-luxury-manager-bootstrap.js"><\/script>' +
-      '<script src="/221-luxury-manager-enhancements.js"><\/script>';
+      '<script src="/221-luxury-manager-enhancements.js?v=7bbf418b"><\/script>';
     const patched = /<\/body>/i.test(html)
       ? html.replace(/<\/body>/i, injection + '<\/body>')
       : html + injection;
