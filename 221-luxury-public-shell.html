@@ -7,156 +7,28 @@
   <style>
     html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
     #site-frame{display:block;width:100%;height:100%;border:0}
-    #catalog-status{position:fixed;inset:auto 12px 12px auto;z-index:10;padding:6px 9px;border-radius:6px;background:rgba(0,0,0,.72);color:#fff;font:11px/1.2 system-ui,sans-serif;opacity:0;pointer-events:none}
   </style>
 </head>
 <body>
-<iframe id="site-frame" title="221 LUXURY" src="/index.html?static-site=1&v=5"></iframe>
-<div id="catalog-status" aria-hidden="true"></div>
-<script src="/supabase-config.js?v=public-5"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
-(function(){
-  'use strict';
-
-  const frame=document.getElementById('site-frame');
-  const status=document.getElementById('catalog-status');
-
-  function showError(message){
-    console.error('[221 LUXURY public catalog]',message);
-    if(status){
-      status.textContent=String(message||'Catalogue indisponible');
-      status.style.opacity='1';
-      setTimeout(()=>{status.style.opacity='0';},5000);
-    }
-  }
-
-  function normalize(row,client){
-    const colors=(row.product_colors||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-    const colorIndex=new Map(colors.map((c,i)=>[c.id,i]));
-    const images=(row.product_images||[]).slice().sort((a,b)=>{
-      if(!!b.is_cover!==!!a.is_cover) return b.is_cover?1:-1;
-      return (a.sort_order||0)-(b.sort_order||0);
-    }).map(image=>({
-      src:client.storage.from('product-images').getPublicUrl(image.storage_path).data.publicUrl||'',
-      colorIdx:image.color_id&&colorIndex.has(image.color_id)?colorIndex.get(image.color_id):null,
-      isCover:!!image.is_cover
-    })).filter(image=>image.src);
-
-    const variants=(row.product_variants||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0))
-      .filter(v=>String(v.size||'').trim())
-      .map(v=>({
-        size:String(v.size||'').trim(),
-        price:Number(v.price)||0,
-        oldPrice:v.old_price==null?null:Number(v.old_price)||0,
-        stock:v.stock==null?null:Math.max(0,Number(v.stock)||0)
-      }));
-
-    const cover=images.find(image=>image.isCover)||images[0]||null;
-    return {
-      id:row.slug,
-      dbId:row.id,
-      name:row.name||'',
-      category:row.category||((row.categories||[])[0]||''),
-      categories:Array.isArray(row.categories)?row.categories:[],
-      img:cover?cover.src:'',
-      price:Number(row.price)||0,
-      oldPrice:row.old_price==null?null:Number(row.old_price)||0,
-      badge:row.badge||null,
-      isNew:!!row.is_new,
-      published:row.published!==false,
-      stock:Math.max(0,Number(row.stock)||0),
-      stockThreshold:Math.max(0,Number(row.stock_threshold)||0),
-      colors:colors.map(c=>c.hex||'#ccc'),
-      colorData:colors.map(c=>({hex:c.hex,label:c.name})),
-      sizes:variants.map(v=>v.size),
-      sizePrices:Object.fromEntries(variants.map(v=>[v.size,v.price])),
-      sizeVariants:variants,
-      images:images.map(image=>image.src),
-      photos:images,
-      personalization:row.personalization||{enabled:false,tiers:[]},
-      photoPersonalization:row.photo_personalization||{enabled:false,required:false},
-      description:row.description||'',
-      details:row.details||'',
-      rating:row.rating==null?null:Number(row.rating),
-      reviews:row.reviews==null?null:Number(row.reviews)
-    };
-  }
-
-  async function getCatalog(client){
-    const store=await client.from('stores')
-      .select('id')
-      .eq('slug','221-luxury')
-      .eq('is_active',true)
-      .maybeSingle();
-
-    if(store.error) throw store.error;
-    if(!store.data) throw new Error('Boutique 221 LUXURY introuvable.');
-
-    const result=await client.from('products')
-      .select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)')
-      .eq('store_id',store.data.id)
-      .eq('published',true)
-      .order('created_at',{ascending:false});
-
-    if(result.error) throw result.error;
-    return (result.data||[]).map(row=>normalize(row,client));
-  }
-
-  function injectIntoFrame(catalog){
-    const doc=frame.contentDocument;
-    if(!doc || !frame.contentWindow) throw new Error('Site public inaccessible depuis le chargeur.');
-
-    const script=doc.createElement('script');
-    script.type='application/javascript';
-    script.textContent=
-      'window.__221LUXURY_LIVE_CATALOG__='+JSON.stringify(catalog)+';\n'+
-      '(function(){\n'+
-      '  if(typeof PRODUCTS==="undefined" || !Array.isArray(PRODUCTS)) throw new Error("PRODUCTS unavailable");\n'+
-      '  const next=window.__221LUXURY_LIVE_CATALOG__||[];\n'+
-      '  PRODUCTS.splice(0,PRODUCTS.length,...next);\n'+
-      '  const cats=[...new Set(next.flatMap(function(p){return (Array.isArray(p.categories)&&p.categories.length?p.categories:(p.category?[p.category]:[])).filter(Boolean);}))];\n'+
-      '  if(typeof CATEGORIES!=="undefined" && Array.isArray(CATEGORIES)) CATEGORIES.splice(0,CATEGORIES.length,...cats);\n'+
-      '  if(typeof CATEGORIES_COMING_SOON!=="undefined" && Array.isArray(CATEGORIES_COMING_SOON)) CATEGORIES_COMING_SOON.splice(0,CATEGORIES_COMING_SOON.length);\n'+
-      '  if(typeof renderManagedCategoryTiles==="function") renderManagedCategoryTiles();\n'+
-      '  if(typeof renderCategoryFilters==="function" && typeof shopState!=="undefined") renderCategoryFilters();\n'+
-      '  if(typeof renderProductGrid==="function"){\n'+
-      '    const novelty=PRODUCTS.filter(function(p){return p&&(p.isNew===true||p.badge==="Nouveau"||p.badge==="Nouveauté"||p.badge==="Nouveaute"||String(p.badge||"").includes("Nouveau"));});\n'+
-      '    if(document.getElementById("homeNouveautesGrid")) renderProductGrid("homeNouveautesGrid",novelty);\n'+
-      '    if(document.getElementById("homeGrid")) renderProductGrid("homeGrid",PRODUCTS);\n'+
-      '    if(document.getElementById("bestsellersGrid")) renderProductGrid("bestsellersGrid",PRODUCTS);\n'+
-      '  }\n'+
-      '  if(typeof applyShopFilters==="function" && typeof shopState!=="undefined" && document.getElementById("shopGrid")) applyShopFilters();\n'+
-      '  if(typeof renderRoute==="function") renderRoute();\n'+
-      '  document.documentElement.dataset.supabaseCatalog="ready";\n'+
-      '})();';
-
-    doc.body.appendChild(script);
-  }
-
-  async function boot(){
-    const cfg=window.__221LUXURY_SUPABASE__||{};
-    if(!cfg.url||!cfg.publishableKey) throw new Error('Configuration Supabase manquante.');
-    if(!window.supabase||!window.supabase.createClient) throw new Error('Client Supabase manquant.');
-
-    if(frame.contentDocument && frame.contentDocument.readyState==='complete'){
-      // already loaded
-    }else{
-      await new Promise((resolve,reject)=>{
-        const done=()=>{frame.removeEventListener('load',done);frame.removeEventListener('error',fail);resolve();};
-        const fail=()=>{frame.removeEventListener('load',done);frame.removeEventListener('error',fail);reject(new Error('Chargement du site public impossible.'));};
-        frame.addEventListener('load',done,{once:true});
-        frame.addEventListener('error',fail,{once:true});
-      });
-    }
-
-    const client=window.supabase.createClient(cfg.url,cfg.publishableKey,{auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}});
-    const catalog=await getCatalog(client);
-    injectIntoFrame(catalog);
-  }
-
-  boot().catch(showError);
-})();
-</script>
+  <iframe id="site-frame" title="221 LUXURY" src="/index.html?static-site=1&v=6"></iframe>
+  <script>
+  (function(){
+    'use strict';
+    var frame=document.getElementById('site-frame');
+    frame.addEventListener('load',function(){
+      try{
+        var doc=frame.contentDocument;
+        if(!doc) throw new Error('Public site document unavailable');
+        if(doc.documentElement && doc.documentElement.dataset.supabaseCatalog==='ready') return;
+        var script=doc.createElement('script');
+        script.src='/221-luxury-supabase-runtime.js?v=live-5';
+        script.async=false;
+        doc.body.appendChild(script);
+      }catch(error){
+        console.error('[221 LUXURY public] live catalog runtime could not start',error);
+      }
+    },{once:true});
+  })();
+  </script>
 </body>
 </html>
