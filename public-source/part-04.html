@@ -1,0 +1,100 @@
+              <a class="community-tile" href="https://www.instagram.com/dudufaitdesvideos?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+              <a class="community-tile" href="https://www.instagram.com/yerimjamess?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+              <a class="community-tile" href="https://www.instagram.com/moodboy.sn?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+              <a class="community-tile" href="https://www.instagram.com/zo_flame?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+              <a class="community-tile" href="https://www.instagram.com/dip_doundouguissofficiel?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+              <a class="community-tile" href="https://www.instagram.com/forever_gentle?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+              <a class="community-tile" href="https://www.instagram.com/math_mes_videos?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+              <a class="community-tile" href="https://www.instagram.com/akatsuki_sn_officiel?utm_source=ig_web_button_share_sheet&amp;igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noopener noreferrer"><img src="" alt="221 LUXURY communauté" class="communityImg"><span class="handle">@221__luxury</span></a>
+            </div>
+          </div>
+          <button class="carousel-btn carousel-next" id="communityNext" aria-label="Photo suivante"></button>
+        </div>
+        <div class="text-center reveal" style="margin-top:2rem;">
+          <a href="https://www.instagram.com/221__luxury" target="_blank" rel="noopener noreferrer" class="btn btn-ghost btn-sm">Voir plus sur Instagram</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- NEWSLETTER — gold band -->
+    <section class="newsletter reveal tone-gold">
+      <div class="container">
+        <span class="eyebrow">Cercle privé</span>
+        <h2 class="display-2" style="margin-top:.8rem;">Accédez aux ventes privées</h2>
+        <p class="lede" style="margin-inline:auto;text-align:center;">Inscrivez-vous pour recevoir en avant-première nos nouvelles collections, dont Bagues, Bracelets et Lunettes à venir.</p>
+        <form class="newsletter-form" onsubmit="return handleNewsletterSubmit(event)">
+          <label for="newsletterEmail" class="sr-only">Votre adresse e-mail</label>
+          <input type="email" id="newsletterEmail" required placeholder="Votre adresse e-mail">
+          <button type="submit">S'inscrire</button>
+        </form>
+        <div class="newsletter-note"></div>
+      </div>
+    </section>
+
+  </section>
+
+  <!-- =========================================================
+       VIEW: SHOP  (#/shop)
+       ========================================================= -->
+  <section class="view" id="view-shop">
+    <div class="page-hero">
+      <div class="container">
+        <div class="breadcrumbs"><a href="#/">Accueil</a> / Boutique</div>
+        <h1 class="display-2">La collection</h1>
+        <svg class="gold-stroke center reveal" viewBox="0 0 220 10"><path d="M4 5 Q60 -2 110 5 T216 5"/></svg>
+      </div>
+    </div>
+
+    <section class="section-tight">
+      <div class="container">
+        <button class="btn btn-ghost btn-sm mobile-filter-toggle" id="toggleFilters" style="margin-bottom:1.4rem;">Filtrer &amp; trier</button>
+
+        <div class="shop-layout">
+          <aside class="filters" id="filtersPanel">
+            <div class="filter-group">
+              <p class="filter-group-title">Recherche</p>
+              <input type="text" id="shopSearch" aria-label="Rechercher un produit" placeholder="Nom du produit…" style="width:100%;background:var(--surface);border:1px solid var(--line);color:var(--text);padding:.7rem;font-size:.85rem;">
+            </div>
+            <div class="filter-group">
+              <p class="filter-group-title">Catégorie</p>
+              <div id="categoryFilters"></div>
+            </div>
+            <div class="filter-group">
+              <p class="filter-group-title">Prix (FCFA)</p>
+              <div class="price-range">
+                <input type="number" id="priceMin" aria-label="Prix minimum" placeholder="Min">
+                <span>—</span>
+                <input type="number" id="priceMax" aria-label="Prix maximum" placeholder="Max">
+              </div>
+            </div>
+            <div class="filter-group">
+              <p class="filter-group-title">Uniquement</p>
+              <label class="filter-option"><input type="checkbox" id="filterPromo"><span>En promotion</span></label>
+              <label class="filter-option"><input type="checkbox" id="filterNew"><span>Nouveautés</span></label>
+            </div>
+            <button class="btn btn-ghost btn-sm btn-block" id="resetFilters" style="margin-top:.6rem;">Réinitialiser</button>
+          </aside>
+
+          <div>
+            <div class="toolbar">
+              <span class="result-count" id="resultCount"></span>
+              <select class="sort-select" id="sortSelect">
+                <option value="featured">Trier : en vedette</option>
+                <option value="price-asc">Prix croissant</option>
+                <option value="price-desc">Prix décroissant</option>
+                <option value="rating">Meilleures notes</option>
+              </select>
+            </div>
+            <div class="product-grid" id="shopGrid"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </section>
+
+  <!-- =========================================================
+       VIEW: PRODUCT  (#/product?id=..)
+       ========================================================= -->
+  <section class="view" id="view-product">
+    <div class="container" style="padding-top:2rem;">
+      <div class="breadcrumbs" id="pdBreadcrumbs"></div>
