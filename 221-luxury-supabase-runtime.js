@@ -79,6 +79,31 @@
     };
   }
 
+  function loadImagesProgressively(root, batchSize){
+    if(!root) return;
+    const imgs=[...root.querySelectorAll('img')].filter(function(img){return !!img.src;});
+    if(!imgs.length) return;
+    let cursor=0;
+    const size=batchSize||4;
+    const step=function(){
+      const batch=imgs.slice(cursor,cursor+size);
+      if(!batch.length) return;
+      cursor+=batch.length;
+      batch.forEach(function(img,index){
+        img.loading='eager';
+        img.decoding='async';
+        img.fetchPriority=(cursor<=size&&index===0)?'high':'low';
+      });
+      Promise.all(batch.map(function(img){
+        return img.complete?Promise.resolve():new Promise(function(resolve){
+          img.addEventListener('load',resolve,{once:true});
+          img.addEventListener('error',resolve,{once:true});
+        });
+      })).then(function(){setTimeout(step,0);});
+    };
+    step();
+  }
+
   function repaint(){
     try{
       const cats=[...new Set((PRODUCTS||[]).flatMap(function(p){
@@ -100,6 +125,10 @@
       }
       if(typeof applyShopFilters==='function' && typeof shopState!=='undefined' && document.getElementById('shopGrid')) applyShopFilters();
       if(typeof renderRoute==='function') renderRoute();
+      ['managedCategoryGrid','homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'].forEach(function(id){
+        const root=document.getElementById(id);
+        if(root) loadImagesProgressively(root,4);
+      });
     }catch(e){ console.error('221 LUXURY Supabase repaint error',e); }
   }
 
