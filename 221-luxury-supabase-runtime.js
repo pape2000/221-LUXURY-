@@ -95,8 +95,7 @@
         const loadHero=function(){
           try{ if(hero.dataset.loaded!=='1'){ hero.dataset.loaded='1'; hero.load(); } hero.play().catch(function(){}); }catch(e){}
         };
-        if(document.readyState==='complete') setTimeout(loadHero,0);
-        else window.addEventListener('load',loadHero,{once:true});
+        setTimeout(loadHero,0);
       }
 
       const categoryRoot=document.getElementById('managedCategoryGrid');
@@ -111,29 +110,37 @@
     }catch(e){ console.error('221 LUXURY above-fold media prioritization error',e); }
   }
 
-  function loadImagesProgressively(root, batchSize){
-    if(!root) return;
+  function loadImagesProgressively(root,batchSize){
+    if(!root) return Promise.resolve();
     const imgs=[...root.querySelectorAll('img')].filter(function(img){return !!img.src;});
-    if(!imgs.length) return;
-    let cursor=0;
+    if(!imgs.length) return Promise.resolve();
+
     const size=batchSize||4;
-    const step=function(){
-      const batch=imgs.slice(cursor,cursor+size);
-      if(!batch.length) return;
-      cursor+=batch.length;
-      batch.forEach(function(img,index){
-        img.loading='eager';
-        img.decoding='async';
-        img.fetchPriority=(cursor<=size&&index===0)?'high':'low';
-      });
-      Promise.all(batch.map(function(img){
-        return img.complete?Promise.resolve():new Promise(function(resolve){
-          img.addEventListener('load',resolve,{once:true});
-          img.addEventListener('error',resolve,{once:true});
+    let cursor=0;
+
+    return new Promise(function(resolve){
+      const step=function(){
+        const batch=imgs.slice(cursor,cursor+size);
+        if(!batch.length){ resolve(); return; }
+
+        cursor+=batch.length;
+        batch.forEach(function(img,index){
+          img.loading='eager';
+          img.decoding='async';
+          img.fetchPriority=(cursor<=size&&index===0)?'high':'auto';
         });
-      })).then(function(){setTimeout(step,0);});
-    };
-    step();
+
+        Promise.all(batch.map(function(img){
+          return img.complete
+            ? Promise.resolve()
+            : new Promise(function(done){
+                img.addEventListener('load',done,{once:true});
+                img.addEventListener('error',done,{once:true});
+              });
+        })).then(function(){ setTimeout(step,0); });
+      };
+      step();
+    });
   }
 
   function repaint(){
@@ -159,13 +166,19 @@
       if(typeof renderRoute==='function') renderRoute();
       prioritizeAboveFoldMedia();
       const categoryRoot=document.getElementById('managedCategoryGrid');
-      if(categoryRoot) loadImagesProgressively(categoryRoot,4);
-      setTimeout(function(){
-        ['homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'].forEach(function(id){
-          const root=document.getElementById(id);
-          if(root) loadImagesProgressively(root,4);
-        });
-      },120);
+      const productRoots=['homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'];
+
+      (categoryRoot ? loadImagesProgressively(categoryRoot,4) : Promise.resolve())
+        .then(function(){
+          let chain=Promise.resolve();
+          productRoots.forEach(function(id){
+            chain=chain.then(function(){
+              const root=document.getElementById(id);
+              return root ? loadImagesProgressively(root,4) : Promise.resolve();
+            });
+          });
+        })
+        .catch(function(error){ console.error('221 LUXURY progressive media queue error',error); });
     }catch(e){ console.error('221 LUXURY Supabase repaint error',e); }
   }
 
@@ -224,8 +237,12 @@
           if(status!=='SUBSCRIBED') console.warn('221 LUXURY realtime status:',status);
         });
 
+      const pollTimer=setInterval(scheduleRefresh,5000);
+
       window.addEventListener('beforeunload',function(){
         try{ client.removeChannel(channel); }catch(e){}
+        try{ clearInterval(pollTimer); }catch(e){}
+        try{ clearTimeout(refreshTimer); }catch(e){}
       },{once:true});
     }catch(e){
       window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='error';
