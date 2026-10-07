@@ -4,27 +4,127 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>221 LUXURY</title>
+  <script src="/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <script>
-(async function () {
-  try {
-    const response = await fetch('/index.html', { cache: 'no-store' });
-    if (!response.ok) throw new Error('index.html inaccessible (' + response.status + ')');
-    const html = await response.text();
-    const injection =
-      '<script src="/supabase-config.js"><\/script>' +
-      '<script src="/221-luxury-supabase-runtime.js"><\/script>';
-    const patched = /<\/body>/i.test(html)
-      ? html.replace(/<\/body>/i, injection + '<\/body>')
-      : html + injection;
-    document.open();
-    document.write(patched);
-    document.close();
-  } catch (error) {
-    console.error('[221 LUXURY] public shell error', error);
-    document.body.innerHTML = '<div style="font-family:system-ui;padding:40px">Impossible de charger le site pour le moment.</div>';
+(async function(){
+  'use strict';
+
+  function findProductsArrayEnd(source,start){
+    let depth=0,inString='',escaped=false;
+    for(let i=start;i<source.length;i++){
+      const ch=source[i];
+      if(inString){
+        if(escaped) escaped=false;
+        else if(ch==='\\') escaped=true;
+        else if(ch===inString) inString='';
+        continue;
+      }
+      if(ch==='"' || ch==="'" || ch.charCodeAt(0)===96){ inString=ch; continue; }
+      if(ch==='['){ depth++; continue; }
+      if(ch===']'){
+        depth--;
+        if(depth===0) return i;
+      }
+    }
+    return -1;
   }
+
+  function normalize(row,client){
+    const colors=(row.product_colors||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
+    const colorIndex=new Map(colors.map((c,i)=>[c.id,i]));
+    const images=(row.product_images||[]).slice().sort((a,b)=>{
+      if(!!b.is_cover!==!!a.is_cover) return b.is_cover?1:-1;
+      return (a.sort_order||0)-(b.sort_order||0);
+    }).map(image=>({
+      src:client.storage.from('product-images').getPublicUrl(image.storage_path).data.publicUrl||'',
+      colorIdx:image.color_id && colorIndex.has(image.color_id)?colorIndex.get(image.color_id):null,
+      isCover:!!image.is_cover
+    })).filter(image=>image.src);
+    const variants=(row.product_variants||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0)).map(v=>({
+      size:String(v.size||''),
+      price:Number(v.price)||0,
+      oldPrice:v.old_price==null?null:Number(v.old_price)||0,
+      stock:v.stock==null?null:Math.max(0,Number(v.stock)||0)
+    })).filter(v=>v.size);
+    const cover=images.find(image=>image.isCover)||images[0]||null;
+    return {
+      id:row.slug,
+      name:row.name||'',
+      category:row.category||((row.categories||[])[0]||''),
+      categories:Array.isArray(row.categories)?row.categories:[],
+      img:cover?cover.src:'',
+      price:Number(row.price)||0,
+      oldPrice:row.old_price==null?null:Number(row.old_price)||0,
+      badge:row.badge||null,
+      isNew:!!row.is_new,
+      stock:Math.max(0,Number(row.stock)||0),
+      stockThreshold:Math.max(0,Number(row.stock_threshold)||0),
+      colors:colors.map(c=>c.hex||'#ccc'),
+      colorData:colors.map(c=>({hex:c.hex,label:c.name})),
+      sizes:variants.map(v=>v.size),
+      sizePrices:Object.fromEntries(variants.map(v=>[v.size,v.price])),
+      sizeVariants:variants,
+      images:images.map(image=>image.src),
+      photos:images,
+      personalization:row.personalization||{enabled:false,tiers:[]},
+      photoPersonalization:row.photo_personalization||{enabled:false,required:false},
+      description:row.description||'',
+      details:row.details||'',
+      rating:row.rating==null?null:Number(row.rating),
+      reviews:row.reviews==null?null:Number(row.reviews)
+    };
+  }
+
+  async function getCatalog(client){
+    const storeResult=await client.from('stores').select('id,slug,is_active').eq('slug','221-luxury').eq('is_active',true).maybeSingle();
+    if(storeResult.error) throw storeResult.error;
+    if(!storeResult.data) return null;
+    const result=await client.from('products')
+      .select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)')
+      .eq('store_id',storeResult.data.id).eq('published',true).order('created_at',{ascending:false});
+    if(result.error) throw result.error;
+    return (result.data||[]).map(row=>normalize(row,client));
+  }
+
+  function injectCatalog(html,catalog){
+    const marker='const PRODUCTS = [';
+    const markerIndex=html.indexOf(marker);
+    if(markerIndex<0) throw new Error('PRODUCTS marker not found');
+    const arrayStart=markerIndex+marker.length-1;
+    const arrayEnd=findProductsArrayEnd(html,arrayStart);
+    if(arrayEnd<0) throw new Error('PRODUCTS array end not found');
+    return html.slice(0,arrayStart)+JSON.stringify(catalog)+html.slice(arrayEnd+1);
+  }
+
+  async function boot(){
+    const cfg=window.__221LUXURY_SUPABASE__||{};
+    if(!cfg.url || !cfg.publishableKey) throw new Error('Supabase configuration missing');
+    if(!window.supabase || !window.supabase.createClient) throw new Error('Supabase client missing');
+
+    const client=window.supabase.createClient(cfg.url,cfg.publishableKey);
+    const response=await fetch('/index.html?catalog_source=static',{cache:'no-store'});
+    if(!response.ok) throw new Error('index.html inaccessible ('+response.status+')');
+    let html=await response.text();
+
+    try{
+      const catalog=await getCatalog(client);
+      if(catalog && catalog.length) html=injectCatalog(html,catalog);
+    }catch(error){
+      console.error('[221 LUXURY] Supabase public catalog load failed; keeping static catalog.',error);
+    }
+
+    document.open();
+    document.write(html);
+    document.close();
+  }
+
+  boot().catch(function(error){
+    console.error('[221 LUXURY] public shell error',error);
+    document.body.innerHTML='<div style="font-family:system-ui;padding:40px">Impossible de charger le site pour le moment.</div>';
+  });
 })();
 </script>
 </body>
