@@ -79,6 +79,31 @@
     };
   }
 
+  function prioritizeAboveFoldMedia(){
+    try{
+      const hero=document.getElementById('heroVideo');
+      if(hero){
+        hero.preload='auto';
+        hero.setAttribute('fetchpriority','high');
+        const loadHero=function(){
+          try{ if(hero.dataset.loaded!=='1'){ hero.dataset.loaded='1'; hero.load(); } hero.play().catch(function(){}); }catch(e){}
+        };
+        if(document.readyState==='complete') setTimeout(loadHero,0);
+        else window.addEventListener('load',loadHero,{once:true});
+      }
+
+      const categoryRoot=document.getElementById('managedCategoryGrid');
+      if(categoryRoot){
+        const imgs=[...categoryRoot.querySelectorAll('img')];
+        imgs.forEach(function(img,i){
+          img.loading=i<4?'eager':'lazy';
+          img.decoding='async';
+          if(i<4) img.fetchPriority='high';
+        });
+      }
+    }catch(e){ console.error('221 LUXURY above-fold media prioritization error',e); }
+  }
+
   function loadImagesProgressively(root, batchSize){
     if(!root) return;
     const imgs=[...root.querySelectorAll('img')].filter(function(img){return !!img.src;});
@@ -125,10 +150,15 @@
       }
       if(typeof applyShopFilters==='function' && typeof shopState!=='undefined' && document.getElementById('shopGrid')) applyShopFilters();
       if(typeof renderRoute==='function') renderRoute();
-      ['managedCategoryGrid','homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'].forEach(function(id){
-        const root=document.getElementById(id);
-        if(root) loadImagesProgressively(root,4);
-      });
+      prioritizeAboveFoldMedia();
+      const categoryRoot=document.getElementById('managedCategoryGrid');
+      if(categoryRoot) loadImagesProgressively(categoryRoot,4);
+      setTimeout(function(){
+        ['homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'].forEach(function(id){
+          const root=document.getElementById(id);
+          if(root) loadImagesProgressively(root,4);
+        });
+      },120);
     }catch(e){ console.error('221 LUXURY Supabase repaint error',e); }
   }
 
