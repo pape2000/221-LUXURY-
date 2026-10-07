@@ -46,7 +46,9 @@
     syncBody+="if(typeof renderManagedCategoryTiles===\"function\")renderManagedCategoryTiles();if(typeof renderCategoryFilters===\"function\"&&typeof shopState!==\"undefined\")renderCategoryFilters();";
     syncBody+="if(typeof renderProductGrid===\"function\"){var novelty=PRODUCTS.filter(function(p){return p&&(p.isNew===true||String(p.badge||\"\").includes(\"Nouveau\"));});var n=document.getElementById(\"homeNouveautesGrid\");if(n){renderProductGrid(\"homeNouveautesGrid\",novelty);if(typeof initProductCarousel===\"function\")initProductCarousel(\"homeNouveautesGrid\");}var h=document.getElementById(\"homeGrid\");if(h){renderProductGrid(\"homeGrid\",PRODUCTS);if(typeof initProductCarousel===\"function\")initProductCarousel(\"homeGrid\");}var b=document.getElementById(\"bestsellersGrid\");if(b){renderProductGrid(\"bestsellersGrid\",PRODUCTS);if(typeof initProductCarousel===\"function\")initProductCarousel(\"bestsellersGrid\");}}";
     syncBody+="if(typeof applyShopFilters===\"function\"&&typeof shopState!==\"undefined\"&&document.getElementById(\"shopGrid\"))applyShopFilters();if(typeof renderRoute===\"function\")renderRoute();document.documentElement.dataset.supabaseCatalog=\"ready\";}catch(e){console.error(\"[221 LUXURY] live catalog sync failed\",e);}})();";
-    return html.replace(/<\\/body>\\s*<\\/html>\\s*$/i,syncStart+syncBody+"<\\/script>\\n</body></html>");
+    var end=html.lastIndexOf("</body>");
+    if(end<0) return html+syncStart+syncBody+"<\\/script>";
+    return html.slice(0,end)+syncStart+syncBody+"<\\/script>\\n"+html.slice(end);
   }
   async function boot(){
     var cfg=window.__221LUXURY_SUPABASE__||{}; if(!cfg.url||!cfg.publishableKey)throw new Error("Configuration Supabase manquante.");
