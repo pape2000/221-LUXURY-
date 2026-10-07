@@ -160,38 +160,6 @@
     }
   };
 
-  // Dedicated add-product click bridge. It deliberately uses an ID-based selector
-  // so it keeps working after the sidebar is re-rendered.
-  function installAddProductBridge(){
-    if(window.__221LUXURY_ADD_BRIDGE__) return;
-    window.__221LUXURY_ADD_BRIDGE__=true;
-    document.addEventListener('click',function(event){
-      const addButton=event.target.closest?.('[data-221-add-product]');
-      if(addButton){
-        event.preventDefault();
-        event.stopPropagation();
-        const api=window.__221LUXURY_SUPABASE_MANAGER_API__;
-        if(!api?.showNewProduct){
-          notify('Le module de création du produit n’est pas encore prêt.','error');
-          return;
-        }
-        api.showNewProduct();
-        return;
-      }
-      const saveButton=event.target.closest?.('[data-221-save-new-product]');
-      if(saveButton){
-        event.preventDefault();
-        event.stopPropagation();
-        const api=window.__221LUXURY_SUPABASE_MANAGER_API__;
-        if(!api?.saveNew){
-          notify('Le module de sauvegarde n’est pas prêt.','error');
-          return;
-        }
-        api.saveNew();
-      }
-    },true);
-  }
-
   function boot(){
     installAddProductBridge();
   }
