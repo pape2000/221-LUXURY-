@@ -83,9 +83,13 @@ jobs:
 
             const landing = await fetch(process.env.PUBLIC_URL, {cache:'no-store'});
             const landingText = await landing.text();
+            const landingHeaders = Object.fromEntries([...landing.headers.entries()]);
             console.log(JSON.stringify({
               landingStatus: landing.status,
               landingType: landing.headers.get('content-type'),
+              landingCsp: landing.headers.get('content-security-policy'),
+              landingCacheControl: landing.headers.get('cache-control'),
+              landingServer: landing.headers.get('server'),
               landingBytes: landingText.length,
               hasBuildRuntime: landingText.includes('221-luxury-supabase-runtime.js'),
               hasProductsArray: landingText.includes('let PRODUCTS = ['),
