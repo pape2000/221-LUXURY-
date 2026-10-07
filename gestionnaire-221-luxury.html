@@ -2841,6 +2841,16 @@ function downloadHTML(html){
     const file=e?.target?.files?.[0];
     if(file) await importLegacyFile(file);
   };
+
+  // Expose a minimal bridge API for the standalone create-product handler.
+  window.__221LUXURY_SUPABASE_MANAGER_API__={
+    get db(){return db;},
+    get user(){return currentUser;},
+    get store(){return currentStore;},
+    loadCatalog,
+    createProduct:async function(formData){return saveProductBundle(null,null,formData,true);}
+  };
+
   async function importLegacyFile(file){
     if(!file.name.toLowerCase().endsWith('.html')){notify('Veuillez sélectionner un fichier .html','error');return;}
     if(products.length){notify('Le catalogue Supabase contient déjà des produits. Migration annulée pour éviter les doublons.','info');return;}
