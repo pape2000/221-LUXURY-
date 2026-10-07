@@ -1,0 +1,30 @@
+/* 221 LUXURY — mobile-only responsive layer. Desktop is untouched. */
+@media (max-width: 768px){
+  html,body{width:100%;max-width:100%;overflow-x:hidden;}
+  .header-inner{padding-inline:14px;gap:1rem;}
+  .site-header{width:100%;}
+  .main-nav{display:none!important;}
+  .collections-bar-mobile{display:block!important;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  .main-nav-mobile{min-width:max-content;}
+  .hero{min-height:78svh;}
+  .hero-video{width:100%;height:100%;object-fit:cover;}
+  .section-inner,.container{width:100%;max-width:100%;box-sizing:border-box;padding-inline:16px;}
+  .product-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:1.35rem .75rem!important;}
+  .product-media{width:100%;aspect-ratio:1/1;}
+  .product-info{padding-top:.8rem;}
+  .product-name{font-size:.88rem;line-height:1.28;}
+  .product-price .now{font-size:.92rem;}
+  .product-price .was{font-size:.7rem;}
+  .product-carousel{width:100%;}
+  .product-carousel-viewport{gap:.75rem;}
+  .product-carousel-viewport .product-card{flex:0 0 calc((100% - .75rem)/2)!important;}
+  .cat-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:.75rem!important;}
+  .cat-tile{min-width:0;}
+  .footer-top{grid-template-columns:1fr!important;gap:1.8rem!important;}
+  .footer-bottom{flex-direction:column;align-items:flex-start;gap:.6rem;}
+  .pd-layout,.product-detail-layout{grid-template-columns:1fr!important;}
+  .pd-gallery,.pd-info{min-width:0;}
+  .pd-actions{flex-direction:column;}
+  .pd-actions>*{width:100%!important;}
+  img,video{max-width:100%;}
+}
