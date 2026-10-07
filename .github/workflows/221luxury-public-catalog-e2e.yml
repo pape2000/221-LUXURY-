@@ -12,6 +12,9 @@ on:
       - supabase-config.js
       - vercel.json
       - .github/workflows/221luxury-public-catalog-e2e.yml
+      - build.mjs
+      - package.json
+      - 221-luxury-mobile.css
 
 jobs:
   public-catalog:
@@ -38,8 +41,9 @@ jobs:
           const fs = require('fs');
           const html = fs.readFileSync('dist/index.html','utf8');
           if (!html.includes('221-luxury-supabase-runtime.js')) throw new Error('Live Supabase runtime missing from dist/index.html');
-          if (!html.includes('let PRODUCTS = [')) throw new Error('Mutable PRODUCTS catalog missing from public build');
+          if (!html.includes('var PRODUCTS = [')) throw new Error('Mutable PRODUCTS catalog missing from public build');
           const size = fs.statSync('dist/index.html').size;
+          if (size > 8000000) throw new Error('Optimized public build is unexpectedly large: ' + size + ' bytes');
           console.log(JSON.stringify({ok:true, distIndexBytes:size}));
           NODE
 
@@ -96,6 +100,7 @@ jobs:
               productsPropertyType: typeof window.PRODUCTS,
               productsBindingType: typeof PRODUCTS,
               productsLength: (typeof PRODUCTS !== 'undefined' && Array.isArray(PRODUCTS)) ? PRODUCTS.length : null,
+              productsGlobalArray: Array.isArray(window.PRODUCTS),
               runtimeStatus: window.__221LUXURY_SUPABASE_RUNTIME_STATUS__ || null,
               runtimeGuard: !!window.__221LUXURY_SUPABASE_RUNTIME__,
               runtimeScripts: [...document.scripts].map(s => s.src).filter(Boolean).filter(u => u.includes('221-luxury')),
