@@ -40,8 +40,10 @@ jobs:
           node - <<'NODE'
           const fs = require('fs');
           const html = fs.readFileSync('dist/index.html','utf8');
-          if (!html.includes('loadCatalogFromSupabase')) throw new Error('Supabase catalog loader missing from public build');
-          if (!html.includes('var PRODUCTS = [')) throw new Error('Mutable PRODUCTS catalog missing from public build');
+          if (!html.includes('221-luxury-supabase-runtime.js')) throw new Error('Supabase catalog runtime missing from public build');
+          if (!html.includes('var PRODUCTS = [')) throw new Error('Shared PRODUCTS catalog missing from public build');
+          if (!html.includes('function mountPartials(){')) throw new Error('Storefront partials logic was stripped from public build');
+          if (!html.includes('function initApp(){')) throw new Error('Storefront app logic was stripped from public build');
           const size = fs.statSync('dist/index.html').size;
           if (size > 8000000) throw new Error('Optimized public build is unexpectedly large: ' + size + ' bytes');
           console.log(JSON.stringify({ok:true, distIndexBytes:size}));
@@ -92,7 +94,7 @@ jobs:
               landingServer: landing.headers.get('server'),
               landingBytes: landingText.length,
               hasSupabaseCatalogCode: landingText.includes('loadCatalogFromSupabase'),
-              hasProductsArray: landingText.includes('let PRODUCTS = ['),
+              hasProductsArray: landingText.includes('var PRODUCTS = ['),
               hasOldLoader: landingText.includes('catalog-loader'),
               hasIframeShell: landingText.includes('site-frame')
             }));
