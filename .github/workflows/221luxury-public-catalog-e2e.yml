@@ -73,6 +73,9 @@ jobs:
             page.on('console', msg => {
               if(msg.type()==='error') console.error('[browser]', msg.text());
             });
+            page.on('pageerror', err => {
+              console.error('[pageerror]', err.stack || err.message || String(err));
+            });
 
             const landing = await fetch(process.env.PUBLIC_URL, {cache:'no-store'});
             const landingText = await landing.text();
