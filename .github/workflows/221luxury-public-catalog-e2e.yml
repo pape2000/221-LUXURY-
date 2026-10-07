@@ -84,7 +84,7 @@ jobs:
               landingType: landing.headers.get('content-type'),
               landingBytes: landingText.length,
               hasBuildRuntime: landingText.includes('221-luxury-supabase-runtime.js'),
-              hasProductsArray: landingText.includes('const PRODUCTS = []'),
+              hasProductsArray: landingText.includes('let PRODUCTS = ['),
               hasOldLoader: landingText.includes('catalog-loader'),
               hasIframeShell: landingText.includes('site-frame')
             }));
