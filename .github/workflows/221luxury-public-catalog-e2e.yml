@@ -79,7 +79,7 @@ jobs:
               hasHero: !!document.querySelector('.hero')
             }));
 
-            await page.goto(process.env.PUBLIC_URL+'#/shop?e2e=live', {waitUntil:'domcontentloaded',timeout:120000});
+            await page.evaluate(() => { location.hash = '#/shop?e2e=live'; });
             await page.waitForFunction(expected => {
               return document.querySelectorAll('#shopGrid .product-card').length === expected;
             }, rows.length, {timeout:120000});
