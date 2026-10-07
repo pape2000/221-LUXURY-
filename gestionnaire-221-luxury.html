@@ -428,7 +428,42 @@ input,select,textarea{font-family:inherit;font-size:14px}
   .field-grid.cols-3{grid-template-columns:1fr 1fr;}
   .topbar-title{display:none;}
 }
-.size-price-row input{min-width:0;width:100%;box-sizing:border-box}@media(max-width:700px){.size-price-row{grid-template-columns:1fr 1fr 80px 32px!important}}\n</style>
+.size-price-row input{min-width:0;width:100%;box-sizing:border-box}@media(max-width:700px){.size-price-row{grid-template-columns:1fr 1fr 80px 32px!important}}\n
+/* ─── PHONE RESPONSIVE — manager only ─────────────────── */
+@media(max-width:768px){
+  #app{height:100dvh;min-height:100dvh;}
+  .topbar{height:auto;min-height:56px;padding:8px 10px;gap:8px;flex-wrap:wrap;}
+  .topbar-logo{font-size:9px;letter-spacing:.22em;}
+  .topbar-actions{margin-left:auto;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .topbar-actions .btn{padding:6px 9px;font-size:11px;}
+  .topbar-actions #exportBtn{display:none!important;}
+  .stats-bar{padding:8px 10px;gap:10px;}
+  .main-layout{min-height:0;flex-direction:column;}
+  .sidebar{width:100%;max-height:285px;height:auto;border-right:0;border-bottom:1px solid var(--border);}
+  .sidebar-header{padding:9px;gap:8px;}
+  #addProductBtn{min-height:42px;font-size:13px;}
+  .sidebar-list{min-height:0;max-height:205px;padding:6px;}
+  .sidebar-item{padding:8px;}
+  .content{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .editor{padding:12px;max-width:none;}
+  .editor-header{flex-wrap:wrap;gap:10px;margin-bottom:16px;padding-bottom:14px;}
+  .editor-title{font-size:17px;}
+  .editor-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .editor-actions .btn{width:100%;justify-content:center;}
+  .editor > div[style*="grid-template-columns:1fr 240px"]{grid-template-columns:1fr!important;}
+  .section{padding:14px;margin-bottom:12px;}
+  .field-grid,.field-grid.cols-3{grid-template-columns:1fr!important;}
+  .color-add-row{align-items:stretch;}
+  .color-add-row input[type=text]{min-width:0;width:100%;}
+  .photo-card-body{align-items:stretch;}
+  .photo-card-actions{width:100%;margin-left:0;}
+  .photo-card-actions .btn{flex:1;}
+  .preview-modal{width:96vw;max-height:90dvh;}
+  .modal{width:94vw;}
+  .toast{left:10px;right:10px;bottom:12px;text-align:center;}
+  .dashboard-grid{grid-template-columns:1fr 1fr!important;}
+}
+</style>
   <script src="./supabase-config.js"></script>
 </head>
 <body>
@@ -470,6 +505,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
     <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="sidebar-header">
+        <button id="addProductBtn" type="button" class="btn btn-primary" style="width:100%;justify-content:center">＋ Ajouter un produit</button>
         <input type="search" class="sidebar-search" id="searchInput" placeholder="Rechercher un produit…" oninput="filterProducts()">
         <div class="sidebar-filters" id="catFilters"></div>
       </div>
@@ -1104,7 +1140,7 @@ function renderSidebar(){
   // Bouton ajouter
   list.innerHTML += `
     <div style="padding:8px 0">
-      <button class="btn btn-ghost" style="width:100%;justify-content:center;gap:6px" type="button" onclick="window.showNewProduct()">
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;gap:6px" type="button" data-221-add-product>
         <span style="font-size:16px">+</span> Ajouter un produit
       </button>
     </div>`;
@@ -1155,7 +1191,7 @@ function buildEditorHTML(p, isNew){
       <div class="editor-actions">
         <button class="btn btn-ghost btn-sm" onclick="openPreviewModal()" title="Voir un aperçu du produit">👁 Aperçu</button>
         ${!isNew?`<button class="btn btn-ghost btn-sm" onclick="duplicateProduct('${p.id}')">📋 Dupliquer</button><button class="btn btn-danger btn-sm" onclick="askDelete('${p.id}')">Supprimer</button>`:''}
-        <button class="btn btn-primary" type="button" onclick="${isNew?'window.__221LUXURY_SAVE_NEW__()':`window.saveProduct('${p.id}')`}">
+        <button class="btn btn-primary" type="button" ${isNew?'data-221-save-new-product':`onclick="window.saveProduct('${p.id}')"`}>
           💾 Enregistrer
         </button>
       </div>
@@ -2796,6 +2832,26 @@ function downloadHTML(html){
     showView('new');
     renderSidebar();
     setTimeout(()=>livePreview(),0);
+  }
+
+  // Direct click handlers inside the manager bridge; no dependency on external enhancement timing.
+  if(!window.__221LUXURY_CORE_ACTIONS_BOUND__){
+    window.__221LUXURY_CORE_ACTIONS_BOUND__=true;
+    document.addEventListener('click',function(event){
+      const addButton=event.target.closest?.('#addProductBtn,[data-221-add-product]');
+      if(addButton){
+        event.preventDefault();
+        event.stopPropagation();
+        newProductViewSupabase();
+        return;
+      }
+      const saveButton=event.target.closest?.('[data-221-save-new-product]');
+      if(saveButton){
+        event.preventDefault();
+        event.stopPropagation();
+        saveNewSupabase();
+      }
+    },true);
   }
 
   // Replace only the persistence-facing functions. UI generation stays the original.
