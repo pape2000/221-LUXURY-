@@ -2,6 +2,7 @@
   'use strict';
   if (window.__221LUXURY_SUPABASE_RUNTIME__) return;
   window.__221LUXURY_SUPABASE_RUNTIME__ = true;
+  window.__221LUXURY_SUPABASE_RUNTIME_STATUS__={state:'loaded',error:null,at:Date.now()};
 
   if(!window.__221LUXURY_SUPABASE__){
     window.__221LUXURY_SUPABASE__={
@@ -175,7 +176,9 @@
 
     const result=await client.from('products').select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)').eq('store_id',storeResult.data.id).eq('published',true).order('created_at',{ascending:false});
     if(result.error) throw result.error;
-    if(typeof PRODUCTS==='undefined' || !Array.isArray(PRODUCTS)) return;
+    if(typeof PRODUCTS==='undefined' || !Array.isArray(PRODUCTS)){
+      throw new Error('Public PRODUCTS binding is unavailable to Supabase runtime.');
+    }
     const next=(result.data||[]).map(function(row){return normalize(row,client);});
     PRODUCTS.splice(0,PRODUCTS.length,...next);
     repaint();
@@ -185,12 +188,15 @@
 
   async function init(){
     try{
+      window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='initializing';
       // The production page normally has these resources already, but the
       // runtime remains safe when opened by itself as well.
       await loadScript(CONFIG_SRC);
       await loadScript(SUPABASE_SRC);
       const client=buildClient();
+      window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='fetching_catalog';
       await fetchAndApply(client);
+      window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='ready';
 
       let refreshTimer=null;
       let refreshing=false;
@@ -218,6 +224,8 @@
         try{ client.removeChannel(channel); }catch(e){}
       },{once:true});
     }catch(e){
+      window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='error';
+      window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.error=String(e&&e.message||e);
       console.error('221 LUXURY Supabase catalog load failed',e);
     }
   }
