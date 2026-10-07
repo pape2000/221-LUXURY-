@@ -179,12 +179,10 @@
 
   async function init(){
     try{
-      // The production build already loads Supabase config and the SDK before
-      // this runtime. Do not wait on their load events again: that can deadlock
-      // when the script has already finished loading.
-      if(!window.__221LUXURY_SUPABASE__ || !window.supabase || !window.supabase.createClient){
-        throw new Error('Supabase client not ready in public page.');
-      }
+      // The production page normally has these resources already, but the
+      // runtime remains safe when opened by itself as well.
+      await loadScript(CONFIG_SRC);
+      await loadScript(SUPABASE_SRC);
       const client=buildClient();
       await fetchAndApply(client);
 
