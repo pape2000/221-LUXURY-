@@ -105,7 +105,7 @@ for(const name of [
   '221-luxury-manager-enhancements.js'
 ]) copy(name);
 
-const productCount=(publicHtml.match(/var PRODUCTS = ([\\s\\S]*?);/)||[])[1];
+const productCount=(publicHtml.match(/var PRODUCTS = ([\s\S]*?);/)||[])[1];
 console.log('221 LUXURY build complete:',{
   originalBytes:Buffer.byteLength(original),
   publicBytes:Buffer.byteLength(publicHtml),
