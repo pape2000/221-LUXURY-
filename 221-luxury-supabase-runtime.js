@@ -218,6 +218,12 @@
     }
   }
 
-  if(document.readyState==='complete') setTimeout(init,50);
-  else window.addEventListener('load',function(){setTimeout(init,50);},{once:true});
+  // Start as soon as the DOM is ready. Waiting for window 'load' would
+  // unnecessarily wait for the hero video and all images, which can delay
+  // the live Supabase catalog indefinitely on slower phones.
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(init,0);},{once:true});
+  }else{
+    setTimeout(init,0);
+  }
 })();
