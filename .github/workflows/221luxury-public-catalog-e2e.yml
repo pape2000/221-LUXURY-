@@ -74,6 +74,17 @@ jobs:
               if(msg.type()==='error') console.error('[browser]', msg.text());
             });
 
+            const landing = await fetch(process.env.PUBLIC_URL, {cache:'no-store'});
+            const landingText = await landing.text();
+            console.log(JSON.stringify({
+              landingStatus: landing.status,
+              landingType: landing.headers.get('content-type'),
+              landingBytes: landingText.length,
+              hasBuildRuntime: landingText.includes('221-luxury-supabase-runtime.js'),
+              hasProductsArray: landingText.includes('const PRODUCTS = []'),
+              hasOldLoader: landingText.includes('catalog-loader'),
+              hasIframeShell: landingText.includes('site-frame')
+            }));
             await page.goto(process.env.PUBLIC_URL, {waitUntil:'domcontentloaded', timeout:120000});
             await page.waitForFunction(() => document.documentElement.dataset.supabaseCatalog === 'ready', {timeout:120000}).catch(err => {
               console.error(JSON.stringify({readyTimeout:true, badResponses:badResponses.slice(0,30), url:page.url()}));
