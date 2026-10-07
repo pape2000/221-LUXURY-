@@ -36,6 +36,36 @@
     setTimeout(()=>window.location.reload(),Math.max(0,delay||150));
   }
 
+  function installNewProductGuards(){
+    if(window.__221LUXURY_NEW_PRODUCT_GUARDS__) return;
+    window.__221LUXURY_NEW_PRODUCT_GUARDS__=true;
+    document.addEventListener('click',function(e){
+      const btn=e.target?.closest?.('#sidebarList button[onclick^="showNewProduct"]');
+      if(btn){
+        e.preventDefault(); e.stopImmediatePropagation();
+        try{ window.__221LUXURY_SUPABASE_MANAGER_API__?.showNewProduct?.(); }catch(err){ console.error(err); notify(err?.message||'Impossible d’ouvrir le formulaire.','error'); }
+        return;
+      }
+      const save=e.target?.closest?.('#newProductView .editor-actions .btn-primary');
+      if(save){
+        e.preventDefault(); e.stopImmediatePropagation();
+        (async()=>{
+          try{
+            document.body.classList.add('supabase-busy');
+            const api=window.__221LUXURY_SUPABASE_MANAGER_API__;
+            if(!api?.saveNew) throw new Error('Module de sauvegarde du nouveau produit indisponible.');
+            await api.saveNew();
+          }catch(err){
+            console.error(err);
+            notify(err?.message||'Impossible d’enregistrer le nouveau produit.','error');
+          }finally{document.body.classList.remove('supabase-busy');}
+          if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installNewProductGuards,{once:true});
+  else installNewProductGuards();
+})();
+      }
+    },true);
+  }
+
   window.bulkSetNew=async function(flag){
     const ids=selectedIds();
     if(!ids.length) return;
