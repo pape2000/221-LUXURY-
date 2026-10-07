@@ -3,5 +3,19 @@
     { "source": "/gestionnaire", "destination": "/gestionnaire-shell.html" },
     { "source": "/gestionnaire/", "destination": "/gestionnaire-shell.html" },
     { "source": "/", "destination": "/221-luxury-public-shell.html" }
+  ],
+  "headers": [
+    {
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/gestionnaire",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/gestionnaire/",
+      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
+    }
   ]
 }
