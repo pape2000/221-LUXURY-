@@ -72,7 +72,8 @@ for(const name of [
   'gestionnaire-shell.html',
   'gestionnaire-221-luxury.html',
   '221-luxury-manager-bootstrap.js',
-  '221-luxury-manager-enhancements.js'
+  '221-luxury-manager-enhancements.js',
+  '221-luxury-mobile.css'
 ]) copy(name);
 
 console.log('221 LUXURY build complete:',{
