@@ -540,7 +540,7 @@ input,select,textarea{font-family:inherit;font-size:14px}
     <!-- SIDEBAR -->
     <div class="sidebar">
       <div class="sidebar-header">
-        <button id="addProductBtn" type="button" class="btn btn-primary" style="width:100%;justify-content:center">＋ Ajouter un produit</button>
+        <a id="addProductBtn" class="btn btn-primary" href="/gestionnaire?new=1" style="width:100%;justify-content:center;text-decoration:none">＋ Ajouter un produit</a>
         <input type="search" class="sidebar-search" id="searchInput" placeholder="Rechercher un produit…" oninput="filterProducts()">
         <div class="sidebar-filters" id="catFilters"></div>
       </div>
@@ -1176,9 +1176,9 @@ function renderSidebar(){
   // Bouton ajouter
   list.innerHTML += `
     <div style="padding:8px 0">
-      <button class="btn btn-ghost" style="width:100%;justify-content:center;gap:6px" type="button" data-221-add-product>
+      <a class="btn btn-ghost" href="/gestionnaire?new=1" style="width:100%;justify-content:center;gap:6px;text-decoration:none" data-221-add-product>
         <span style="font-size:16px">+</span> Ajouter un produit
-      </button>
+      </a>
     </div>`;
 }
 
@@ -1227,7 +1227,7 @@ function buildEditorHTML(p, isNew){
       <div class="editor-actions">
         <button class="btn btn-ghost btn-sm" onclick="openPreviewModal()" title="Voir un aperçu du produit">👁 Aperçu</button>
         ${!isNew?`<button class="btn btn-ghost btn-sm" onclick="duplicateProduct('${p.id}')">📋 Dupliquer</button><button class="btn btn-danger btn-sm" onclick="askDelete('${p.id}')">Supprimer</button>`:''}
-        <button class="btn btn-primary" type="button" ${isNew?'data-221-save-new-product':`onclick="window.saveProduct('${p.id}')"`}>
+        <button class="btn btn-primary" type="button" onclick="${isNew?'window.__221LUXURY_SAVE_NEW__()':`window.saveProduct('${p.id}')`}">
           💾 Enregistrer
         </button>
       </div>
@@ -2870,6 +2870,12 @@ function downloadHTML(html){
     setTimeout(()=>livePreview(),0);
   }
 
+  // Native add-product links remain functional even if enhancement scripts are delayed.
+  const directAddLinks=()=>document.querySelectorAll('[data-221-add-product],#addProductBtn').forEach(el=>{
+    el.addEventListener('click',()=>{ document.body.classList.remove('supabase-busy'); },{passive:true});
+  });
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',directAddLinks,{once:true}); else directAddLinks();
+
   // Direct click handlers inside the manager bridge; no dependency on external enhancement timing.
   if(!window.__221LUXURY_CORE_ACTIONS_BOUND__){
     window.__221LUXURY_CORE_ACTIONS_BOUND__=true;
@@ -3069,8 +3075,17 @@ function downloadHTML(html){
     currentUser=session?.user||null;
     setSessionUI();
     if(!currentUser){showAuth();return;}
-    try{hideAuth();await ensureStore();await loadCatalog();}
-    catch(err){console.error(err);showAuth();setAuthMsg(err?.message||'Impossible de charger la boutique.','error');}
+    try{
+      hideAuth();
+      await ensureStore();
+      await loadCatalog();
+      document.body.classList.remove('supabase-busy');
+      if(new URLSearchParams(window.location.search).get('new')==='1'){
+        history.replaceState(null,'',window.location.pathname);
+        setTimeout(()=>newProductViewSupabase(),0);
+      }
+    }
+    catch(err){console.error(err);document.body.classList.remove('supabase-busy');showAuth();setAuthMsg(err?.message||'Impossible de charger la boutique.','error');}
   }
 
   document.addEventListener('DOMContentLoaded',()=>{ init().catch(err=>{console.error(err);notify(err?.message||'Initialisation Supabase impossible.','error');}); });
