@@ -16,12 +16,13 @@
   const STORE_SLUG = '221-luxury';
 
   function loadScript(src){
-    return new Promise(function(resolve, reject){
-      const existing = document.querySelector('script[src="' + src + '"]');
+    return new Promise(function(resolve,reject){
+      const existing=document.querySelector('script[src="' + src + '"]');
       if(existing){
-        if(window.__221LUXURY_SUPABASE_CONFIG__ || window.supabase) return resolve();
-        existing.addEventListener('load', resolve, {once:true});
-        existing.addEventListener('error', reject, {once:true});
+        if(src.indexOf('supabase-config.js')!==-1 && window.__221LUXURY_SUPABASE__) return resolve();
+        if(src.indexOf('@supabase/supabase-js')!==-1 && window.supabase && window.supabase.createClient) return resolve();
+        existing.addEventListener('load',resolve,{once:true});
+        existing.addEventListener('error',reject,{once:true});
         return;
       }
       const s=document.createElement('script');
@@ -31,7 +32,6 @@
       document.head.appendChild(s);
     });
   }
-
   function buildClient(){
     const cfg=window.__221LUXURY_SUPABASE__||{};
     if(!cfg.url || !cfg.publishableKey) throw new Error('Supabase configuration missing');
@@ -191,8 +191,12 @@
       window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='initializing';
       // The production page normally has these resources already, but the
       // runtime remains safe when opened by itself as well.
-      await loadScript(CONFIG_SRC);
-      await loadScript(SUPABASE_SRC);
+      if(!window.__221LUXURY_SUPABASE__){
+        await loadScript(CONFIG_SRC);
+      }
+      if(!window.supabase || !window.supabase.createClient){
+        await loadScript(SUPABASE_SRC);
+      }
       const client=buildClient();
       window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='fetching_catalog';
       await fetchAndApply(client);
