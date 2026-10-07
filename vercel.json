@@ -1,21 +1,27 @@
 {
   "rewrites": [
-    { "source": "/gestionnaire", "destination": "/gestionnaire-shell.html" },
-    { "source": "/gestionnaire/", "destination": "/gestionnaire-shell.html" },
-    { "source": "/", "destination": "/221-luxury-public-shell.html" }
-  ],
-  "headers": [
-    {
-      "source": "/",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
-    },
     {
       "source": "/gestionnaire",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
+      "destination": "/gestionnaire-shell.html"
     },
     {
       "source": "/gestionnaire/",
-      "headers": [{ "key": "Cache-Control", "value": "no-store, no-cache, must-revalidate" }]
+      "destination": "/gestionnaire-shell.html"
+    },
+    {
+      "source": "/",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(index.html|static-index.html|gestionnaire|gestionnaire/)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store, no-cache, must-revalidate, max-age=0"
+        }
+      ]
     }
   ]
 }
