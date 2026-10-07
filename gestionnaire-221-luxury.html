@@ -1104,7 +1104,7 @@ function renderSidebar(){
   // Bouton ajouter
   list.innerHTML += `
     <div style="padding:8px 0">
-      <button class="btn btn-ghost" style="width:100%;justify-content:center;gap:6px" onclick="showNewProduct()">
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;gap:6px" onclick="window.__221LUXURY_OPEN_NEW_PRODUCT__()">
         <span style="font-size:16px">+</span> Ajouter un produit
       </button>
     </div>`;
@@ -1155,7 +1155,7 @@ function buildEditorHTML(p, isNew){
       <div class="editor-actions">
         <button class="btn btn-ghost btn-sm" onclick="openPreviewModal()" title="Voir un aperçu du produit">👁 Aperçu</button>
         ${!isNew?`<button class="btn btn-ghost btn-sm" onclick="duplicateProduct('${p.id}')">📋 Dupliquer</button><button class="btn btn-danger btn-sm" onclick="askDelete('${p.id}')">Supprimer</button>`:''}
-        <button class="btn btn-primary" onclick="${isNew?'saveNew':'saveProduct'}('${p.id}')">
+        <button class="btn btn-primary" onclick="${isNew?'window.__221LUXURY_SAVE_NEW__()':'window.saveProduct'}('${p.id}')">
           💾 Enregistrer
         </button>
       </div>
@@ -2802,6 +2802,8 @@ function downloadHTML(html){
   window.showNewProduct=newProductViewSupabase;
   window.saveNew=saveNewSupabase;
   window.saveProduct=saveProductSupabase;
+  window.__221LUXURY_OPEN_NEW_PRODUCT__=newProductViewSupabase;
+  window.__221LUXURY_SAVE_NEW__=saveNewSupabase;
 
   window.askDelete=function(id){
     const p=products.find(x=>x.id===id); if(!p)return;
