@@ -1,0 +1,100 @@
+.locale-country .country-meta{display:block;color:#aaa;font-size:10px;margin-top:2px}
+.locale-divider{height:1px;background:rgba(233,210,156,.12);margin:11px 0}
+.locale-reset{width:100%;border:0;background:transparent;color:#aaa;font-size:10px;cursor:pointer;padding:7px}
+@media(max-width:700px){#localeTrigger{width:48px;height:48px}.locale-panel{right:-42px;width:280px}}
+
+</style>
+<style id="221luxury-product-font-final">
+.product-card .product-info .product-name,
+.product-card .product-info .product-name a,
+.product-card h3.product-name,
+.product-card h3.product-name a,
+.product-card .product-title,
+.product-card .product-title a,
+#view-product .pd-title{
+  font-family:Arial, Helvetica, sans-serif !important;
+  font-weight:400 !important;
+  font-style:normal !important;
+  letter-spacing:0 !important;
+  text-transform:none !important;
+}
+</style>
+
+<style id="221luxury-final-visual-fix">
+.product-card .product-name,.product-card .product-name a,.product-card h3.product-name,
+#view-product .pd-title{font-family:Arial,Helvetica,sans-serif!important;font-weight:400!important;font-style:normal!important;letter-spacing:0!important;text-transform:none!important}
+.product-card .product-price,.product-card .product-price .now,.product-card .product-price .was,
+#view-product .pd-price,#view-product #pdCurrentPrice,#view-product #pdOldPriceWrap{
+font-family:Impact,Haettenschweiler,"Arial Narrow Bold",sans-serif!important;font-weight:400!important}
+#localeSwitcher{position:relative;display:flex;align-items:center;z-index:10000}
+#localeTrigger{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:62px;height:38px;padding:0 11px;border:1px solid rgba(233,210,156,.34);border-radius:999px;background:rgba(15,14,12,.94);color:#fff;cursor:pointer;font:500 12px/1 Arial,Helvetica,sans-serif}
+#localeFlag{width:23px;height:23px;display:inline-flex;align-items:center;justify-content:center;border-radius:50%;font-size:17px;line-height:1;background:rgba(255,255,255,.08)}
+</style>
+
+  <script src="./supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <linearGradient id="goldLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f3e3b8"/>
+      <stop offset="50%" stop-color="#c9a25f"/>
+      <stop offset="100%" stop-color="#96773c"/>
+    </linearGradient>
+  </defs>
+</svg>
+
+<div id="site-header-mount"></div>
+
+<main>
+
+  <!-- =========================================================
+       VIEW: HOME  (#/)
+       ========================================================= -->
+  <section class="view is-active" id="view-home">
+
+    <!-- HERO — dark tone, real photo, full bleed -->
+    <section class="hero">
+      <video class="hero-video" id="heroVideo" autoplay muted loop playsinline preload="metadata" aria-hidden="true"></video>
+      <div class="hero-noise"></div>
+      <div class="hero-content">
+        <span class="eyebrow reveal">Dakar · Sénégal</span>
+        <h1 class="display-1 reveal reveal-delay-2">L'exigence<br><span class="italic-serif">comme signature</span></h1>
+        <svg class="gold-stroke reveal reveal-delay-2" viewBox="0 0 220 10"><path d="M4 5 Q60 -2 110 5 T216 5"/></svg>
+        <p class="lede reveal reveal-delay-3">Chaînes, pendentifs et bijoux sertis choisis pièce par pièce. Une exigence née à Dakar, pensée pour ceux qui reconnaissent la qualité au premier regard.</p>
+        <div class="hero-cta reveal reveal-delay-4">
+          <a href="#/shop" class="btn btn-solid">Acheter maintenant</a>
+          <a href="#/shop?new=1" class="btn btn-solid">Nouveautés</a>
+        </div>
+      </div>
+      <div class="scroll-cue"><span>Défiler</span><span class="line"></span></div>
+    </section>
+
+    <!-- TRUST STRIP — champagne tone -->
+    <div class="strip tone-champagne">
+      <div class="strip-track">
+        <span>N°1 Fashion Jewelry in Senegal</span><span>Livraison rapide au Sénégal &amp; à l'international</span><span>Paiement 100 % sécurisé</span><span>Collections exclusives 221 LUXURY</span>
+        <span>N°1 Fashion Jewelry in Senegal</span><span>Livraison rapide au Sénégal &amp; à l'international</span><span>Paiement 100 % sécurisé</span><span>Collections exclusives 221 LUXURY</span>
+      </div>
+    </div>
+
+    <!-- COLLECTIONS — paper (white) tone -->
+    <section class="section tone-paper" id="home-collections">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Collections</span>
+          <h2 class="display-2">Nos collections</h2>
+          <svg class="gold-stroke" viewBox="0 0 220 10"><path d="M4 5 Q60 -2 110 5 T216 5"/></svg>
+          <p class="lede" style="margin-inline:auto; text-align:center;">Découvrez toutes les catégories disponibles dans notre gestionnaire de produits.</p>
+        </div>
+        <div class="cat-grid" id="managedCategoryGrid"></div>
+      </div>
+    </section>
+
+    <!-- NOUVEAUTÉS — produits marqués comme nouveaux -->
+    <section class="section section-tight tone-white" id="home-nouveautes">
+      <div class="container">
+        <div class="section-head reveal">
+          <span class="eyebrow">Nouveautés</span>
