@@ -8,15 +8,24 @@ on:
       - '221-luxury-supabase-runtime.js'
       - 'supabase-config.js'
       - 'index.html'
+  pull_request:
+    paths:
+      - '.github/workflows/221luxury-supabase-runtime.yml'
+      - '221-luxury-supabase-runtime.js'
+      - 'supabase-config.js'
+      - 'index.html'
 
 jobs:
   sync:
-    if: github.event.head_commit.message != 'chore: sync 221 LUXURY Supabase runtime'
+    if: github.event_name == 'pull_request' || github.event.head_commit.message != 'chore: sync 221 LUXURY Supabase runtime'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+
       - name: Ensure runtime script is loaded
         shell: bash
         run: |
@@ -32,6 +41,7 @@ jobs:
               s=s.replace(marker, tag+'\n'+marker, 1)
               p.write_text(s, encoding='utf-8')
           PY
+
       - name: Commit runtime integration
         shell: bash
         run: |
@@ -43,6 +53,8 @@ jobs:
           git config user.email 'actions@users.noreply.github.com'
           git add index.html
           git commit -m 'chore: sync 221 LUXURY Supabase runtime'
-          git push
-
-# runtime trigger marker: 221 LUXURY
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
+          else
+            git push
+          fi
