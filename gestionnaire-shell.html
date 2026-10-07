@@ -14,7 +14,8 @@
     const html = await response.text();
     const injection =
       '<script src="/supabase-config.js"><\/script>' +
-      '<script src="/221-luxury-manager-bootstrap.js"><\/script>';
+      '<script src="/221-luxury-manager-bootstrap.js"><\/script>' +
+      '<script src="/221-luxury-manager-enhancements.js"><\/script>';
     const patched = /<\/body>/i.test(html)
       ? html.replace(/<\/body>/i, injection + '<\/body>')
       : html + injection;
