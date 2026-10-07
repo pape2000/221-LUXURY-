@@ -3,24 +3,24 @@
   if(window.__221LUXURY_MANAGER_ENHANCEMENTS__) return;
   window.__221LUXURY_MANAGER_ENHANCEMENTS__=true;
 
-  const CFG=window.__221LUXURY_SUPABASE__||{};
   const STORE_SLUG='221-luxury';
   const BUCKET='product-images';
 
-  function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+  function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
   async function waitDb(maxMs){
     const start=Date.now();
     while(Date.now()-start<maxMs){
-      const mgr=window.__221LUXURY_SUPABASE_MANAGER__;
-      if(mgr&&mgr.db) return mgr.db;
-      await sleep(250);
+      const manager=window.__221LUXURY_SUPABASE_MANAGER__;
+      if(manager && manager.db) return manager.db;
+      await sleep(200);
     }
     throw new Error('Gestionnaire Supabase non initialisé.');
   }
   async function getStore(db){
     const {data:{session}}=await db.auth.getSession();
     if(!session) throw new Error('Session administrateur absente.');
-    const {data,error}=await db.from('stores').select('id,owner_id,slug').eq('owner_id',session.user.id).eq('slug',STORE_SLUG).maybeSingle();
+    const {data,error}=await db.from('stores').select('id,owner_id,slug')
+      .eq('owner_id',session.user.id).eq('slug',STORE_SLUG).maybeSingle();
     if(error) throw error;
     if(!data) throw new Error('Boutique 221 LUXURY introuvable.');
     return {store:data,user:session.user};
@@ -29,87 +29,61 @@
     if(typeof window.notify==='function') return window.notify(message,type||'info');
     if(typeof window.showToast==='function') return window.showToast(message,type||'info');
   }
-  function selectedIds(){
-    return [...document.querySelectorAll('#sidebarList .bulk-select:checked')].map(el=>String(el.getAttribute('onclick')||'').match(/toggleSelect\('([^']+)'/)?.[1]).filter(Boolean);
+  function getSelectedSlugs(){
+    return [...document.querySelectorAll('#sidebarList .bulk-select:checked')]
+      .map(el=>String(el.getAttribute('onclick')||'').match(/toggleSelect\('([^']+)'/)?.[1])
+      .filter(Boolean);
   }
-  function reloadManager(delay){
-    setTimeout(()=>window.location.reload(),Math.max(0,delay||150));
-  }
-
-  function installNewProductGuards(){
-    if(window.__221LUXURY_NEW_PRODUCT_GUARDS__) return;
-    window.__221LUXURY_NEW_PRODUCT_GUARDS__=true;
-    document.addEventListener('click',function(e){
-      const btn=e.target?.closest?.('#sidebarList button[onclick^="showNewProduct"]');
-      if(btn){
-        e.preventDefault(); e.stopImmediatePropagation();
-        try{ window.__221LUXURY_SUPABASE_MANAGER_API__?.showNewProduct?.(); }catch(err){ console.error(err); notify(err?.message||'Impossible d’ouvrir le formulaire.','error'); }
-        return;
-      }
-      const save=e.target?.closest?.('#newProductView .editor-actions .btn-primary');
-      if(save){
-        e.preventDefault(); e.stopImmediatePropagation();
-        (async()=>{
-          try{
-            document.body.classList.add('supabase-busy');
-            const api=window.__221LUXURY_SUPABASE_MANAGER_API__;
-            if(!api?.saveNew) throw new Error('Module de sauvegarde du nouveau produit indisponible.');
-            await api.saveNew();
-          }catch(err){
-            console.error(err);
-            notify(err?.message||'Impossible d’enregistrer le nouveau produit.','error');
-          }finally{document.body.classList.remove('supabase-busy');}
-          if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',installNewProductGuards,{once:true});
-  else installNewProductGuards();
-})();
-      }
-    },true);
-  }
+  function reloadManager(delay=150){ setTimeout(()=>window.location.reload(),delay); }
 
   window.bulkSetNew=async function(flag){
-    const ids=selectedIds();
-    if(!ids.length) return;
+    const slugs=getSelectedSlugs();
+    if(!slugs.length) return;
     try{
       const db=await waitDb(10000);
       const {store}=await getStore(db);
-      const {data:rows,error:fe}=await db.from('products').select('id').eq('store_id',store.id).in('slug',ids);
-      if(fe) throw fe;
-      const dbIds=(rows||[]).map(r=>r.id);
-      if(!dbIds.length) throw new Error('Aucun produit Supabase correspondant à la sélection.');
-      const {error}=await db.from('products').update({is_new:!!flag}).eq('store_id',store.id).in('id',dbIds);
+      const {data:rows,error}=await db.from('products').select('id').eq('store_id',store.id).in('slug',slugs);
       if(error) throw error;
-      notify(dbIds.length+' produit(s) mis à jour dans Supabase.','success');
+      const ids=(rows||[]).map(row=>row.id);
+      if(!ids.length) throw new Error('Aucun produit Supabase correspondant à la sélection.');
+      const {error:updateError}=await db.from('products').update({is_new:!!flag}).eq('store_id',store.id).in('id',ids);
+      if(updateError) throw updateError;
+      notify(ids.length+' produit(s) mis à jour dans Supabase.','success');
       reloadManager();
-    }catch(err){console.error(err);notify(err?.message||'Mise à jour des nouveautés impossible.','error');}
+    }catch(err){console.error(err);notify(err?.message||'Mise à jour impossible.','error');}
   };
 
   window.bulkSetBadge=async function(badge){
-    const ids=selectedIds();
-    if(!ids.length) return;
+    const slugs=getSelectedSlugs();
+    if(!slugs.length) return;
     try{
       const db=await waitDb(10000);
       const {store}=await getStore(db);
-      const {data:rows,error:fe}=await db.from('products').select('id').eq('store_id',store.id).in('slug',ids);
-      if(fe) throw fe;
-      const dbIds=(rows||[]).map(r=>r.id);
-      if(!dbIds.length) throw new Error('Aucun produit Supabase correspondant à la sélection.');
-      const {error}=await db.from('products').update({badge:badge||null}).eq('store_id',store.id).in('id',dbIds);
+      const {data:rows,error}=await db.from('products').select('id').eq('store_id',store.id).in('slug',slugs);
       if(error) throw error;
-      notify(dbIds.length+' produit(s) mis à jour dans Supabase.','success');
+      const ids=(rows||[]).map(row=>row.id);
+      if(!ids.length) throw new Error('Aucun produit Supabase correspondant à la sélection.');
+      const {error:updateError}=await db.from('products').update({badge:badge||null}).eq('store_id',store.id).in('id',ids);
+      if(updateError) throw updateError;
+      notify(ids.length+' produit(s) mis à jour dans Supabase.','success');
       reloadManager();
-    }catch(err){console.error(err);notify(err?.message||'Mise à jour des badges impossible.','error');}
+    }catch(err){console.error(err);notify(err?.message||'Mise à jour impossible.','error');}
   };
 
-  function makeSlug(base){return (String(base||'produit').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'produit')+'-copie-'+Date.now();}
+  function makeSlug(base){
+    const clean=String(base||'produit').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+      .replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'')||'produit';
+    return clean+'-copie-'+Date.now();
+  }
 
-  window.duplicateProduct=async function(id){
+  window.duplicateProduct=async function(slug){
     try{
       const db=await waitDb(10000);
       const {store}=await getStore(db);
-      const {data:row,error:pe}=await db.from('products').select('*').eq('slug',id).eq('store_id',store.id).single();
-      if(pe) throw pe;
+      const {data:row,error}=await db.from('products').select('*').eq('slug',slug).eq('store_id',store.id).single();
+      if(error) throw error;
 
-      const copyPayload={
+      const {data:copy,error:copyError}=await db.from('products').insert({
         store_id:store.id,
         slug:makeSlug(row.name),
         name:(row.name||'')+' (Copie)',
@@ -128,26 +102,25 @@
         reviews:row.reviews==null?null:Number(row.reviews),
         personalization:row.personalization||{enabled:false,tiers:[]},
         photo_personalization:row.photo_personalization||{enabled:false,required:false}
-      };
+      }).select('*').single();
+      if(copyError) throw copyError;
 
-      const {data:copy,error:ce}=await db.from('products').insert(copyPayload).select('*').single();
-      if(ce) throw ce;
-
-      const {data:colors,error:coErr}=await db.from('product_colors').select('*').eq('product_id',row.id).order('sort_order');
-      if(coErr) throw coErr;
+      const {data:colors,error:colorError}=await db.from('product_colors').select('*').eq('product_id',row.id).order('sort_order');
+      if(colorError) throw colorError;
       const colorMap=new Map();
       if((colors||[]).length){
-        const colorRows=(colors||[]).map((c,i)=>({product_id:copy.id,name:c.name||'',hex:c.hex||'#D4AF37',sort_order:c.sort_order??i}));
-        const {data:newColors,error}=await db.from('product_colors').insert(colorRows).select('*');
+        const {data:newColors,error}=await db.from('product_colors').insert((colors||[]).map((c,i)=>({
+          product_id:copy.id,name:c.name||'',hex:c.hex||'#D4AF37',sort_order:c.sort_order??i
+        }))).select('*');
         if(error) throw error;
         (newColors||[]).forEach((c,i)=>colorMap.set((colors||[])[i].id,c.id));
       }
 
-      const {data:variants,error:vaErr}=await db.from('product_variants').select('*').eq('product_id',row.id).order('sort_order');
-      if(vaErr) throw vaErr;
+      const {data:variants,error:variantError}=await db.from('product_variants').select('*').eq('product_id',row.id).order('sort_order');
+      if(variantError) throw variantError;
       const variantMap=new Map();
       if((variants||[]).length){
-        const variantRows=(variants||[]).map((v,i)=>({
+        const {data:newVariants,error}=await db.from('product_variants').insert((variants||[]).map((v,i)=>({
           product_id:copy.id,
           color_id:v.color_id?colorMap.get(v.color_id)||null:null,
           size:v.size||'',
@@ -155,33 +128,28 @@
           old_price:v.old_price==null?null:Number(v.old_price),
           stock:v.stock==null?null:Math.max(0,Number(v.stock)||0),
           sort_order:v.sort_order??i
-        }));
-        const {data:newVariants,error}=await db.from('product_variants').insert(variantRows).select('*');
+        }))).select('*');
         if(error) throw error;
         (newVariants||[]).forEach((v,i)=>variantMap.set((variants||[])[i].id,v.id));
       }
 
-      const {data:images,error:imErr}=await db.from('product_images').select('*').eq('product_id',row.id).order('sort_order');
-      if(imErr) throw imErr;
+      const {data:images,error:imageError}=await db.from('product_images').select('*').eq('product_id',row.id).order('sort_order');
+      if(imageError) throw imageError;
       for(let i=0;i<(images||[]).length;i++){
-        const im=images[i];
-        let newPath='';
-        if(im.storage_path){
-          newPath=store.owner_id+'/'+store.id+'/'+copy.id+'/'+crypto.randomUUID()+'.jpg';
-          const {error}=await db.storage.from(BUCKET).copy(im.storage_path,newPath);
-          if(error) throw error;
-        }
-        if(newPath){
-          const {error}=await db.from('product_images').insert({
-            product_id:copy.id,
-            color_id:im.color_id?colorMap.get(im.color_id)||null:null,
-            variant_id:im.variant_id?variantMap.get(im.variant_id)||null:null,
-            storage_path:newPath,
-            is_cover:!!im.is_cover,
-            sort_order:im.sort_order??i
-          });
-          if(error) throw error;
-        }
+        const image=images[i];
+        if(!image.storage_path) continue;
+        const newPath=store.owner_id+'/'+store.id+'/'+copy.id+'/'+crypto.randomUUID()+'.jpg';
+        const {error}=await db.storage.from(BUCKET).copy(image.storage_path,newPath);
+        if(error) throw error;
+        const {error:insertError}=await db.from('product_images').insert({
+          product_id:copy.id,
+          color_id:image.color_id?colorMap.get(image.color_id)||null:null,
+          variant_id:image.variant_id?variantMap.get(image.variant_id)||null:null,
+          storage_path:newPath,
+          is_cover:!!image.is_cover,
+          sort_order:image.sort_order??i
+        });
+        if(insertError) throw insertError;
       }
 
       notify('Produit dupliqué et enregistré dans Supabase.','success');
@@ -191,4 +159,42 @@
       notify(err?.message||'Duplication impossible.','error');
     }
   };
+
+  // Dedicated add-product click bridge. It deliberately uses an ID-based selector
+  // so it keeps working after the sidebar is re-rendered.
+  function installAddProductBridge(){
+    if(window.__221LUXURY_ADD_BRIDGE__) return;
+    window.__221LUXURY_ADD_BRIDGE__=true;
+    document.addEventListener('click',function(event){
+      const addButton=event.target.closest?.('[data-221-add-product]');
+      if(addButton){
+        event.preventDefault();
+        event.stopPropagation();
+        const api=window.__221LUXURY_SUPABASE_MANAGER_API__;
+        if(!api?.showNewProduct){
+          notify('Le module de création du produit n’est pas encore prêt.','error');
+          return;
+        }
+        api.showNewProduct();
+        return;
+      }
+      const saveButton=event.target.closest?.('[data-221-save-new-product]');
+      if(saveButton){
+        event.preventDefault();
+        event.stopPropagation();
+        const api=window.__221LUXURY_SUPABASE_MANAGER_API__;
+        if(!api?.saveNew){
+          notify('Le module de sauvegarde n’est pas prêt.','error');
+          return;
+        }
+        api.saveNew();
+      }
+    },true);
+  }
+
+  function boot(){
+    installAddProductBridge();
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
 })();
