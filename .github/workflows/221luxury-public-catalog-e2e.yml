@@ -86,6 +86,18 @@ jobs:
               hasIframeShell: landingText.includes('site-frame')
             }));
             await page.goto(process.env.PUBLIC_URL, {waitUntil:'domcontentloaded', timeout:120000});
+            const initialState = await page.evaluate(() => ({
+              readyState: document.readyState,
+              supabaseConfigType: typeof window.__221LUXURY_SUPABASE__,
+              supabaseClientType: typeof window.supabase,
+              productsType: typeof window.PRODUCTS,
+              productsLength: Array.isArray(window.PRODUCTS) ? window.PRODUCTS.length : null,
+              runtimeGuard: !!window.__221LUXURY_SUPABASE_RUNTIME__,
+              runtimeScripts: [...document.scripts].map(s => s.src).filter(Boolean).filter(u => u.includes('221-luxury')),
+              literalImageCount: [...document.images].filter(img => img.getAttribute('src') === '${p.img}').length,
+              bodyPrefix: document.body.innerText.slice(0,120)
+            }));
+            console.log(JSON.stringify({initialState}));
             await page.waitForFunction(() => document.documentElement.dataset.supabaseCatalog === 'ready', {timeout:120000}).catch(err => {
               console.error(JSON.stringify({readyTimeout:true, badResponses:badResponses.slice(0,30), url:page.url()}));
               throw err;
