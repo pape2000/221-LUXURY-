@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestionnaire Produits — 221 LUXURY</title>
+</head>
+<body>
+<script>
+(async function () {
+  try {
+    const response = await fetch('/gestionnaire-221-luxury.html', { cache: 'no-store' });
+    if (!response.ok) throw new Error('gestionnaire-221-luxury.html inaccessible (' + response.status + ')');
+    const html = await response.text();
+    const injection =
+      '<script src="/supabase-config.js"><\/script>' +
+      '<script src="/221-luxury-manager-bootstrap.js"><\/script>';
+    const patched = /<\/body>/i.test(html)
+      ? html.replace(/<\/body>/i, injection + '<\/body>')
+      : html + injection;
+    document.open();
+    document.write(patched);
+    document.close();
+  } catch (error) {
+    console.error('[221 LUXURY] manager shell error', error);
+    document.body.innerHTML = '<div style="font-family:system-ui;padding:40px">Impossible de charger le gestionnaire pour le moment.</div>';
+  }
+})();
+</script>
+</body>
+</html>
