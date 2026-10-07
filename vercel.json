@@ -11,6 +11,10 @@
     {
       "source": "/",
       "destination": "/221-luxury-public-shell.html"
+    },
+    {
+      "source": "/index.html",
+      "destination": "/221-luxury-public-shell.html"
     }
   ],
   "headers": [
