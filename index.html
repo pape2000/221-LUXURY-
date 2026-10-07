@@ -1,156 +1,27 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>221 LUXURY</title>
-  <script src="/supabase-config.js?v=live-7"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    html,body{margin:0;width:100%;min-height:100%;background:#fff}
-    #catalog-loader{min-height:100vh;display:flex;align-items:center;justify-content:center;font:600 13px/1.4 system-ui,sans-serif;color:#222}
-    #catalog-error{max-width:520px;padding:32px;text-align:center}
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>221 LUXURY</title>
+<meta name="robots" content="index,follow">
 </head>
-<body>
-<div id="catalog-loader">Chargement de 221 LUXURY…</div>
+<body style="margin:0;background:#fff">
+<div id="221luxury-live-loader" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#222">Chargement de 221 LUXURY…</div>
 <script>
 (async function(){
-  'use strict';
-
-  function findProductsArrayEnd(source,start){
-    let depth=0,inString='',escaped=false;
-    for(let i=start;i<source.length;i++){
-      const ch=source[i];
-      if(inString){
-        if(escaped) escaped=false;
-        else if(ch==='\\') escaped=true;
-        else if(ch===inString) inString='';
-        continue;
-      }
-      if(ch==='"'||ch==="'"||ch.charCodeAt(0)===96){inString=ch;continue;}
-      if(ch==='['){depth++;continue;}
-      if(ch===']'){
-        depth--;
-        if(depth===0)return i;
-      }
-    }
-    return -1;
-  }
-
-  function imageUrl(client,path){
-    return path ? (client.storage.from('product-images').getPublicUrl(path).data.publicUrl||'') : '';
-  }
-
-  function normalize(row,client){
-    const colors=(row.product_colors||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0));
-    const colorIndex=new Map(colors.map((c,i)=>[c.id,i]));
-    const images=(row.product_images||[]).slice().sort((a,b)=>{
-      if(!!b.is_cover!==!!a.is_cover)return b.is_cover?1:-1;
-      return (a.sort_order||0)-(b.sort_order||0);
-    }).map(image=>({
-      src:imageUrl(client,image.storage_path),
-      colorIdx:image.color_id&&colorIndex.has(image.color_id)?colorIndex.get(image.color_id):null,
-      isCover:!!image.is_cover
-    })).filter(image=>image.src);
-
-    const variants=(row.product_variants||[]).slice().sort((a,b)=>(a.sort_order||0)-(b.sort_order||0))
-      .filter(v=>String(v.size||'').trim())
-      .map(v=>({
-        size:String(v.size||'').trim(),
-        price:Number(v.price)||0,
-        oldPrice:v.old_price==null?null:Number(v.old_price)||0,
-        stock:v.stock==null?null:Math.max(0,Number(v.stock)||0),
-        colorId:v.color_id||null
-      }));
-
-    const cover=images.find(image=>image.isCover)||images[0]||null;
-    return {
-      id:row.slug,
-      dbId:row.id,
-      name:row.name||'',
-      category:row.category||((row.categories||[])[0]||''),
-      categories:Array.isArray(row.categories)?row.categories:[],
-      img:cover?cover.src:'',
-      price:Number(row.price)||0,
-      oldPrice:row.old_price==null?null:Number(row.old_price)||0,
-      badge:row.badge||null,
-      isNew:!!row.is_new,
-      published:row.published!==false,
-      stock:Math.max(0,Number(row.stock)||0),
-      stockThreshold:Math.max(0,Number(row.stock_threshold)||0),
-      colors:colors.map(c=>c.hex||'#ccc'),
-      colorData:colors.map(c=>({hex:c.hex,label:c.name})),
-      sizes:variants.map(v=>v.size),
-      sizePrices:Object.fromEntries(variants.map(v=>[v.size,v.price])),
-      sizeVariants:variants,
-      images:images.map(image=>image.src),
-      photos:images,
-      personalization:row.personalization||{enabled:false,tiers:[]},
-      photoPersonalization:row.photo_personalization||{enabled:false,required:false},
-      description:row.description||'',
-      details:row.details||'',
-      rating:row.rating==null?null:Number(row.rating),
-      reviews:row.reviews==null?null:Number(row.reviews)
-    };
-  }
-
-  async function readLiveCatalog(client){
-    const store=await client.from('stores')
-      .select('id')
-      .eq('slug','221-luxury')
-      .eq('is_active',true)
-      .single();
-    if(store.error)throw store.error;
-
-    const result=await client.from('products')
-      .select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)')
-      .eq('store_id',store.data.id)
-      .eq('published',true)
-      .order('created_at',{ascending:false});
-
-    if(result.error)throw result.error;
-    return (result.data||[]).map(row=>normalize(row,client));
-  }
-
-  function replaceProductsSource(html,catalog){
-    const marker='const PRODUCTS = [';
-    const markerIndex=html.indexOf(marker);
-    if(markerIndex<0)throw new Error('Catalogue PRODUCTS introuvable dans static-index.html');
-    const arrayStart=markerIndex+marker.length-1;
-    const arrayEnd=findProductsArrayEnd(html,arrayStart);
-    if(arrayEnd<0)throw new Error('Fin du tableau PRODUCTS introuvable');
-    return html.slice(0,arrayStart)+JSON.stringify(catalog)+html.slice(arrayEnd+1);
-  }
-
-  async function boot(){
-    const cfg=window.__221LUXURY_SUPABASE__||{};
-    if(!cfg.url||!cfg.publishableKey)throw new Error('Configuration Supabase manquante');
-    if(!window.supabase||!window.supabase.createClient)throw new Error('Client Supabase manquant');
-
-    const client=window.supabase.createClient(cfg.url,cfg.publishableKey,{
-      auth:{autoRefreshToken:false,persistSession:false,detectSessionInUrl:false}
-    });
-
-    const [staticResponse,catalog]=await Promise.all([
-      fetch('/static-index.html?source=live-catalog&v=7',{cache:'no-store'}).then(function(r){
-        if(!r.ok)throw new Error('static-index.html inaccessible: '+r.status);
-        return r.text();
-      }),
-      readLiveCatalog(client)
-    ]);
-
-    const liveHtml=replaceProductsSource(staticResponse,catalog);
+  try{
+    const r=await fetch('https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury?v=live-final-2',{cache:'no-store'});
+    if(!r.ok) throw new Error('Renderer HTTP '+r.status);
+    const html=await r.text();
     document.open();
-    document.write(liveHtml);
+    document.write(html);
     document.close();
+  }catch(error){
+    console.error('[221 LUXURY] live renderer failed',error);
+    const el=document.getElementById('221luxury-live-loader');
+    if(el) el.textContent='Impossible de charger 221 LUXURY.';
   }
-
-  boot().catch(function(error){
-    console.error('[221 LUXURY] Live catalog error',error);
-    const loader=document.getElementById('catalog-loader');
-    if(loader)loader.innerHTML='<div id="catalog-error"><strong>Catalogue momentanément indisponible.</strong><br><br>Le catalogue en ligne n’a pas pu être chargé depuis Supabase.</div>';
-  });
 })();
 </script>
 </body>
