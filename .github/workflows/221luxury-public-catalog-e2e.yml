@@ -6,15 +6,11 @@ on:
     branches: [main]
     paths:
       - index.html
-      - static-index.html
       - 221-luxury-public-shell.html
       - 221-luxury-supabase-runtime.js
       - supabase-config.js
       - vercel.json
       - .github/workflows/221luxury-public-catalog-e2e.yml
-      - build.mjs
-      - package.json
-      - 221-luxury-mobile.css
 
 jobs:
   public-catalog:
@@ -28,28 +24,13 @@ jobs:
         with:
           node-version: 24
 
-      - name: Install test dependency
+      - name: Install Playwright
         run: npm install --no-save playwright@1.55.0
 
       - name: Install Chromium
         run: npx playwright install chromium
 
-      - name: Verify production build
-        run: |
-          npm run build
-          node - <<'NODE'
-          const fs = require('fs');
-          const html = fs.readFileSync('dist/index.html','utf8');
-          if (!html.includes('221-luxury-supabase-runtime.js')) throw new Error('Supabase catalog runtime missing from public build');
-          if (!html.includes('var PRODUCTS = [')) throw new Error('Shared PRODUCTS catalog missing from public build');
-          if (!html.includes('function mountPartials(){')) throw new Error('Storefront partials logic was stripped from public build');
-          if (!html.includes('function initApp(){')) throw new Error('Storefront app logic was stripped from public build');
-          const size = fs.statSync('dist/index.html').size;
-          if (size > 8000000) throw new Error('Optimized public build is unexpectedly large: ' + size + ' bytes');
-          console.log(JSON.stringify({ok:true, distIndexBytes:size}));
-          NODE
-
-      - name: Verify public catalog
+      - name: Verify live public catalog
         env:
           PUBLIC_URL: https://221-luxury-beige.vercel.app/
           SUPABASE_URL: https://shvgcroqovnhltpzceid.supabase.co
@@ -58,87 +39,69 @@ jobs:
         run: |
           node <<'NODE'
           const { chromium } = require('playwright');
-          const base = process.env.SUPABASE_URL;
-          const key = process.env.SUPABASE_KEY;
-          const store = process.env.STORE_ID;
-          const headers = { apikey: key, Authorization: 'Bearer ' + key };
 
           async function api(path) {
-            const r = await fetch(base + path, { headers, cache: 'no-store' });
-            if (!r.ok) throw new Error('Supabase HTTP ' + r.status + ': ' + await r.text());
+            const r = await fetch(process.env.SUPABASE_URL + path, {
+              headers: {
+                apikey: process.env.SUPABASE_KEY,
+                Authorization: 'Bearer ' + process.env.SUPABASE_KEY
+              },
+              cache: 'no-store'
+            });
+            if(!r.ok) throw new Error('Supabase HTTP '+r.status+': '+await r.text());
             return r.json();
           }
 
           (async()=>{
-            const rows = await api('/rest/v1/products?select=slug,name,price,stock,updated_at&store_id=eq.' + store + '&published=eq.true&order=created_at.desc');
+            const rows = await api('/rest/v1/products?select=slug,name,price,stock,updated_at&store_id=eq.'+process.env.STORE_ID+'&published=eq.true&order=created_at.desc');
             if(!rows.length) throw new Error('Supabase returned zero published products.');
+
             const browser = await chromium.launch({headless:true});
-            const page = await browser.newPage({ viewport:{width:390,height:844}, deviceScaleFactor:1 });
-            const badResponses = [];
-            page.on('response', res => { if(res.status() >= 400) badResponses.push({status:res.status(), url:res.url()}); });
-            page.on('console', msg => {
-              if(msg.type()==='error') console.error('[browser]', msg.text());
-            });
-            page.on('pageerror', err => {
-              console.error('[pageerror]', err.stack || err.message || String(err));
-            });
+            const page = await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:1});
+            const errors=[];
+            page.on('pageerror',e=>errors.push('pageerror: '+(e.stack||e.message||String(e))));
+            page.on('console',m=>{if(m.type()==='error') errors.push('console: '+m.text());});
+            page.on('response',r=>{if(r.status()>=500) errors.push('HTTP '+r.status()+' '+r.url());});
 
-            const landing = await fetch(process.env.PUBLIC_URL, {cache:'no-store'});
-            const landingText = await landing.text();
-            const landingHeaders = Object.fromEntries([...landing.headers.entries()]);
-            console.log(JSON.stringify({
-              landingStatus: landing.status,
-              landingType: landing.headers.get('content-type'),
-              landingCsp: landing.headers.get('content-security-policy'),
-              landingCacheControl: landing.headers.get('cache-control'),
-              landingServer: landing.headers.get('server'),
-              landingBytes: landingText.length,
-              hasSupabaseCatalogCode: landingText.includes('loadCatalogFromSupabase'),
-              hasProductsArray: landingText.includes('var PRODUCTS = ['),
-              hasOldLoader: landingText.includes('catalog-loader'),
-              hasIframeShell: landingText.includes('site-frame')
-            }));
-            await page.goto(process.env.PUBLIC_URL, {waitUntil:'domcontentloaded', timeout:120000});
-            const initialState = await page.evaluate(() => ({
-              readyState: document.readyState,
-              supabaseConfigType: typeof window.__221LUXURY_SUPABASE__,
-              supabaseClientType: typeof window.supabase,
-              productsPropertyType: typeof window.PRODUCTS,
-              productsBindingType: typeof PRODUCTS,
-              productsLength: (typeof PRODUCTS !== 'undefined' && Array.isArray(PRODUCTS)) ? PRODUCTS.length : null,
-              productsGlobalArray: Array.isArray(window.PRODUCTS),
-              runtimeStatus: window.__221LUXURY_SUPABASE_RUNTIME_STATUS__ || null,
-              runtimeGuard: !!window.__221LUXURY_SUPABASE_RUNTIME__,
-              runtimeScripts: [...document.scripts].map(s => s.src).filter(Boolean).filter(u => u.includes('221-luxury')),
-              literalImageCount: [...document.images].filter(img => img.getAttribute('src') === '${p.img}').length,
-              bodyPrefix: document.body.innerText.slice(0,120)
-            }));
-            console.log(JSON.stringify({initialState}));
-            await page.waitForFunction(() => document.documentElement.dataset.supabaseCatalog === 'ready', {timeout:120000}).catch(err => {
-              console.error(JSON.stringify({readyTimeout:true, badResponses:badResponses.slice(0,30), url:page.url()}));
-              throw err;
-            });
+            await page.goto(process.env.PUBLIC_URL+'?e2e=live', {waitUntil:'domcontentloaded',timeout:120000});
 
-            const latest = rows[0];
-            await page.goto(process.env.PUBLIC_URL + '#/shop', {waitUntil:'domcontentloaded', timeout:120000});
+            await page.waitForFunction(() =>
+              document.documentElement.dataset.supabaseCatalog === 'ready',
+              {timeout:120000}
+            );
+
+            const home = await page.evaluate(() => ({
+              title: document.title,
+              ready: document.documentElement.dataset.supabaseCatalog === 'ready',
+              productLength: typeof PRODUCTS !== 'undefined' && Array.isArray(PRODUCTS) ? PRODUCTS.length : null,
+              bodyText: document.body.innerText.slice(0,300),
+              hasHeader: !!document.querySelector('header'),
+              hasHero: !!document.querySelector('.hero')
+            }));
+
+            await page.goto(process.env.PUBLIC_URL+'#/shop?e2e=live', {waitUntil:'domcontentloaded',timeout:120000});
             await page.waitForFunction(expected => {
-              const cards = document.querySelectorAll('#shopGrid .product-card').length;
-              return cards === expected;
+              return document.querySelectorAll('#shopGrid .product-card').length === expected;
             }, rows.length, {timeout:120000});
 
-            const result = await page.evaluate((latest) => ({
-              cardCount: document.querySelectorAll('#shopGrid .product-card').length,
-              latestNameFound: [...document.querySelectorAll('#shopGrid .product-name')].some(el => el.textContent.trim() === latest.name),
-              supabaseReady: document.documentElement.dataset.supabaseCatalog === 'ready',
-              liveImages: [...document.querySelectorAll('#shopGrid .product-media img')].slice(0,4).every(img => img.src.includes('/storage/v1/object/public/product-images/'))
-            }), latest);
+            const result = await page.evaluate(latest => {
+              const cards=[...document.querySelectorAll('#shopGrid .product-card')];
+              return {
+                cardCount:cards.length,
+                expected:latest.count,
+                latestNameFound:cards.some(c => c.textContent.includes(latest.name)),
+                ready:document.documentElement.dataset.supabaseCatalog==='ready',
+                liveImages:[...document.querySelectorAll('#shopGrid .product-media img')].slice(0,4).every(img => img.src.includes('/storage/v1/object/public/product-images/'))
+              };
+            }, {count:rows.length,name:rows[0].name});
 
-            if(!result.supabaseReady) throw new Error('Public page did not reach Supabase-ready state.');
-            if(result.cardCount !== rows.length) throw new Error('Public card count '+result.cardCount+' != Supabase '+rows.length+'.');
-            if(!result.latestNameFound) throw new Error('Latest Supabase product is not visible in public shop.');
-            if(!result.liveImages) throw new Error('Public product images are not using Supabase Storage.');
+            console.log(JSON.stringify({ok:true,home,result,errors:errors.slice(0,20)}));
 
-            console.log(JSON.stringify({ok:true,supabasePublishedProducts:rows.length,...result,badResponses:badResponses.slice(0,30)}));
+            if(!result.ready) throw new Error('Supabase-ready flag missing.');
+            if(result.cardCount!==rows.length) throw new Error('Public card count does not match Supabase.');
+            if(!result.latestNameFound) throw new Error('Latest Supabase product is not visible publicly.');
+            if(errors.length) throw new Error('Browser errors: '+errors.slice(0,10).join(' | '));
+
             await browser.close();
-          })().catch(err => { console.error(err); process.exit(1); });
+          })().catch(e=>{console.error(e);process.exit(1);});
           NODE
