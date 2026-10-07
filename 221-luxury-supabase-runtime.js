@@ -115,7 +115,15 @@
   function cleanTemplateArtifacts(){
     try{
       document.querySelectorAll('img[src]').forEach(function(img){
-        if(img.getAttribute('src')==='
+        if(img.getAttribute('src')==='$'+'{p.img}'){
+          img.removeAttribute('src');
+          img.removeAttribute('srcset');
+        }
+      });
+    }catch(e){ console.error('221 LUXURY template artifact cleanup error',e); }
+  }
+
+  function loadImagesProgressively(root, batchSize){
     if(!root) return;
     const imgs=[...root.querySelectorAll('img')].filter(function(img){return !!img.src;});
     if(!imgs.length) return;
@@ -139,7 +147,6 @@
     };
     step();
   }
-
   function repaint(){
     try{
       cleanTemplateArtifacts();
