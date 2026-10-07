@@ -44,3 +44,5 @@ jobs:
           git add index.html
           git commit -m 'chore: sync 221 LUXURY Supabase runtime'
           git push
+
+# runtime trigger marker: 221 LUXURY
