@@ -94,16 +94,18 @@ jobs:
                 cardCount:cards.length,
                 expected:latest.count,
                 latestNameFound:cards.some(c => c.textContent.includes(latest.name)),
+                missingNames:latest.allNames.filter(name => !cards.some(c => c.textContent.includes(name))),
                 ready:document.documentElement.dataset.supabaseCatalog==='ready',
                 liveImages:[...document.querySelectorAll('#shopGrid .product-media img')].slice(0,4).every(img => img.src.includes('/storage/v1/object/public/product-images/'))
               };
-            }, {count:rows.length,name:rows[0].name});
+            }, {count:rows.length,name:rows[0].name,allNames:rows.map(r => r.name)});
 
             console.log(JSON.stringify({ok:true,home,result,errors:errors.slice(0,20)}));
 
             if(!result.ready) throw new Error('Supabase-ready flag missing.');
             if(result.cardCount!==rows.length) throw new Error('Public card count does not match Supabase.');
             if(!result.latestNameFound) throw new Error('Latest Supabase product is not visible publicly.');
+            if(result.missingNames.length) throw new Error('Missing public products: '+result.missingNames.join(' | '));
             if(errors.length) throw new Error('Browser errors: '+errors.slice(0,10).join(' | '));
 
             await browser.close();
