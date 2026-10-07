@@ -68,12 +68,17 @@ jobs:
             if(!rows.length) throw new Error('Supabase returned zero published products.');
             const browser = await chromium.launch({headless:true});
             const page = await browser.newPage({ viewport:{width:390,height:844}, deviceScaleFactor:1 });
+            const badResponses = [];
+            page.on('response', res => { if(res.status() >= 400) badResponses.push({status:res.status(), url:res.url()}); });
             page.on('console', msg => {
               if(msg.type()==='error') console.error('[browser]', msg.text());
             });
 
             await page.goto(process.env.PUBLIC_URL, {waitUntil:'domcontentloaded', timeout:120000});
-            await page.waitForFunction(() => document.documentElement.dataset.supabaseCatalog === 'ready', {timeout:120000});
+            await page.waitForFunction(() => document.documentElement.dataset.supabaseCatalog === 'ready', {timeout:120000}).catch(err => {
+              console.error(JSON.stringify({readyTimeout:true, badResponses:badResponses.slice(0,30), url:page.url()}));
+              throw err;
+            });
 
             const latest = rows[0];
             await page.goto(process.env.PUBLIC_URL + '#/shop', {waitUntil:'domcontentloaded', timeout:120000});
@@ -94,7 +99,7 @@ jobs:
             if(!result.latestNameFound) throw new Error('Latest Supabase product is not visible in public shop.');
             if(!result.liveImages) throw new Error('Public product images are not using Supabase Storage.');
 
-            console.log(JSON.stringify({ok:true,supabasePublishedProducts:rows.length,...result}));
+            console.log(JSON.stringify({ok:true,supabasePublishedProducts:rows.length,...result,badResponses:badResponses.slice(0,30)}));
             await browser.close();
           })().catch(err => { console.error(err); process.exit(1); });
           NODE
