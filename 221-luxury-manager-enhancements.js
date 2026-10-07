@@ -30,7 +30,7 @@
     if(typeof window.showToast==='function') return window.showToast(message,type||'info');
   }
   function selectedIds(){
-    return [...document.querySelectorAll('#sidebarList .bulk-select:checked')].map(el=>String(el.getAttribute('onclick')||'').match(/toggleSelect\\\('([^']+)'/)?.[1]).filter(Boolean);
+    return [...document.querySelectorAll('#sidebarList .bulk-select:checked')].map(el=>String(el.getAttribute('onclick')||'').match(/toggleSelect\('([^']+)'/)?.[1]).filter(Boolean);
   }
   function reloadManager(delay){
     setTimeout(()=>window.location.reload(),Math.max(0,delay||150));
