@@ -1,22 +1,4 @@
 {
-  "rewrites": [
-    {
-      "source": "/gestionnaire",
-      "destination": "/gestionnaire-shell.html"
-    },
-    {
-      "source": "/gestionnaire/",
-      "destination": "/gestionnaire-shell.html"
-    },
-    {
-      "source": "/",
-      "destination": "/221-luxury-public-shell.html"
-    },
-    {
-      "source": "/index.html",
-      "destination": "/221-luxury-public-shell.html"
-    }
-  ],
   "headers": [
     {
       "source": "/(index.html|static-index.html|gestionnaire|gestionnaire/)",
@@ -27,5 +9,19 @@
         }
       ]
     }
-  ]
+  ],
+  "rewrites": [
+    {
+      "source": "/gestionnaire",
+      "destination": "/gestionnaire-shell.html"
+    },
+    {
+      "source": "/gestionnaire/",
+      "destination": "/gestionnaire-shell.html"
+    }
+  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "framework": null
 }
