@@ -38,7 +38,9 @@ function stripLegacyProducts(html){
   const arrayStart=markerIndex+marker.length-1;
   const arrayEnd=findProductsEnd(html,arrayStart);
   if(arrayEnd<0) throw new Error('PRODUCTS array end not found');
-  return html.slice(0,arrayStart)+'[]'+html.slice(arrayEnd+1);
+  // Use a global var in the public build so the live runtime can share
+  // the same catalog array across separate classic script files.
+  return html.slice(0,markerIndex)+'var PRODUCTS = []'+html.slice(arrayEnd+1);
 }
 
 ensureDir(DIST);
