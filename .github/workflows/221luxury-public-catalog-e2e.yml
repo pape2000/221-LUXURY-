@@ -1,4 +1,5 @@
 name: 221 LUXURY - public catalog e2e
+# Live renderer verification follows the Supabase production function.
 
 on:
   workflow_dispatch:
