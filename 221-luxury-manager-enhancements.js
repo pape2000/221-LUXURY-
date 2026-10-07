@@ -30,8 +30,7 @@
     if(typeof window.showToast==='function') return window.showToast(message,type||'info');
   }
   function selectedIds(){
-    const s=window.selectedIds;
-    return s instanceof Set ? [...s] : [];
+    return [...document.querySelectorAll('#sidebarList .bulk-select:checked')].map(el=>String(el.getAttribute('onclick')||'').match(/toggleSelect\\\('([^']+)'/)?.[1]).filter(Boolean);
   }
   function reloadManager(delay){
     setTimeout(()=>window.location.reload(),Math.max(0,delay||150));
@@ -43,8 +42,9 @@
     try{
       const db=await waitDb(10000);
       const {store}=await getStore(db);
-      const products=Array.isArray(window.products)?window.products:[];
-      const dbIds=ids.map(id=>products.find(p=>p.id===id)?._dbId).filter(Boolean);
+      const {data:rows,error:fe}=await db.from('products').select('id').eq('store_id',store.id).in('slug',ids);
+      if(fe) throw fe;
+      const dbIds=(rows||[]).map(r=>r.id);
       if(!dbIds.length) throw new Error('Aucun produit Supabase correspondant à la sélection.');
       const {error}=await db.from('products').update({is_new:!!flag}).eq('store_id',store.id).in('id',dbIds);
       if(error) throw error;
@@ -59,8 +59,9 @@
     try{
       const db=await waitDb(10000);
       const {store}=await getStore(db);
-      const products=Array.isArray(window.products)?window.products:[];
-      const dbIds=ids.map(id=>products.find(p=>p.id===id)?._dbId).filter(Boolean);
+      const {data:rows,error:fe}=await db.from('products').select('id').eq('store_id',store.id).in('slug',ids);
+      if(fe) throw fe;
+      const dbIds=(rows||[]).map(r=>r.id);
       if(!dbIds.length) throw new Error('Aucun produit Supabase correspondant à la sélection.');
       const {error}=await db.from('products').update({badge:badge||null}).eq('store_id',store.id).in('id',dbIds);
       if(error) throw error;
@@ -75,10 +76,7 @@
     try{
       const db=await waitDb(10000);
       const {store}=await getStore(db);
-      const products=Array.isArray(window.products)?window.products:[];
-      const src=products.find(p=>p.id===id);
-      if(!src||!src._dbId) throw new Error('Produit introuvable.');
-      const {data:row,error:pe}=await db.from('products').select('*').eq('id',src._dbId).eq('store_id',store.id).single();
+      const {data:row,error:pe}=await db.from('products').select('*').eq('slug',id).eq('store_id',store.id).single();
       if(pe) throw pe;
 
       const copyPayload={
