@@ -7,64 +7,44 @@
   <style>
     html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#fff}
     #site-frame{display:block;width:100%;height:100%;border:0;background:#fff}
-    #catalog-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;color:#222;font:600 14px/1.4 system-ui,sans-serif;z-index:10}
-    #catalog-error{max-width:520px;padding:32px;text-align:center}
+    #public-error{display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:#fff;font:600 14px/1.5 system-ui,sans-serif;color:#222;padding:24px;text-align:center;z-index:20}
   </style>
 </head>
 <body>
-<div id="catalog-loading">Chargement de 221 LUXURY…</div>
-<iframe id="site-frame" title="221 LUXURY" src="/static-index.html?public=1&v=9"></iframe>
-
-<script src="/supabase-config.js?v=public-8"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<iframe id="site-frame" title="221 LUXURY" src="/static-index.html?public-site=1&v=10"></iframe>
+<div id="public-error"></div>
 <script>
 (function(){
   'use strict';
-
   var frame=document.getElementById('site-frame');
-  var loading=document.getElementById('catalog-loading');
-  var started=false;
+  var error=document.getElementById('public-error');
 
-  function hideLoading(){
-    if(loading) loading.remove();
-  }
-
-  function showError(error){
-    console.error('[221 LUXURY public]',error);
-    if(loading){
-      loading.innerHTML='<div id="catalog-error"><strong>Impossible de charger 221 LUXURY.</strong><br><br>Le site public n’a pas pu terminer son chargement.</div>';
+  function fail(message){
+    console.error('[221 LUXURY public]',message);
+    if(error){
+      error.textContent=message||'Impossible de charger 221 LUXURY.';
+      error.style.display='flex';
     }
   }
 
-  function injectRuntime(){
-    if(started) return;
-    started=true;
+  frame.addEventListener('error',function(){
+    fail('Impossible de charger le site public.');
+  },{once:true});
+
+  frame.addEventListener('load',function(){
     try{
       var doc=frame.contentDocument;
       if(!doc || !doc.body) throw new Error('Document public indisponible.');
-
       var script=doc.createElement('script');
-      script.src='/221-luxury-supabase-runtime.js?v=live-6';
+      script.src='/221-luxury-supabase-runtime.js?v=live-8';
       script.async=false;
-      script.onload=function(){
-        setTimeout(hideLoading,150);
-      };
-      script.onerror=function(){
-        showError(new Error('Impossible de charger le module catalogue Supabase.'));
-      };
+      script.onload=function(){ console.log('[221 LUXURY public] live catalog runtime started'); };
+      script.onerror=function(){ fail('Le catalogue Supabase n’a pas pu être synchronisé.'); };
       doc.body.appendChild(script);
-    }catch(error){
-      showError(error);
+    }catch(e){
+      fail(e.message||String(e));
     }
-  }
-
-  frame.addEventListener('load',injectRuntime,{once:true});
-  frame.addEventListener('error',function(){showError(new Error('Chargement du site public impossible.'));},{once:true});
-
-  // Safety fallback if the iframe is already complete when this shell executes.
-  if(frame.contentDocument && frame.contentDocument.readyState==='complete'){
-    injectRuntime();
-  }
+  },{once:true});
 })();
 </script>
 </body>
