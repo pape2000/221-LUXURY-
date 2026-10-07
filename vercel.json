@@ -1,7 +1,7 @@
 {
   "headers": [
     {
-      "source": "/(index.html|static-index.html|gestionnaire|gestionnaire/)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
@@ -18,8 +18,10 @@
     {
       "source": "/gestionnaire/",
       "destination": "/gestionnaire-shell.html"
+    },
+    {
+      "source": "/",
+      "destination": "https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury"
     }
-  ],
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist"
+  ]
 }
