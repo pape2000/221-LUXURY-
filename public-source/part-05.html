@@ -1,0 +1,100 @@
+    </div>
+
+    <section class="section-tight">
+      <div class="container">
+        <div class="product-detail" id="productDetail"></div>
+
+        <div class="pd-tabs" id="pdTabs">
+          <div class="pd-tab-heads">
+            <button data-tab="desc" class="is-active">Description</button>
+            <button data-tab="delivery">Livraison &amp; retours</button>
+            <button data-tab="reviews">Avis</button>
+          </div>
+          <div class="pd-tab-panel is-active" data-panel="desc" id="panelDesc"></div>
+          <div class="pd-tab-panel" data-panel="delivery">
+            <p>Livraison offerte à Dakar dès 100 000 FCFA d'achat, sous 24 à 72h. Livraison nationale et internationale disponible sous 3 à 10 jours ouvrés selon la destination.</p>
+          </div>
+          <div class="pd-tab-panel" data-panel="reviews" id="panelReviews"></div>
+        </div>
+
+        <div class="section-head reveal" style="margin-top:var(--gap-xl);">
+          <span class="eyebrow">Vous aimerez aussi</span>
+          <h2 class="display-2">Pièces complémentaires</h2>
+          <svg class="gold-stroke" viewBox="0 0 220 10"><path d="M4 5 Q60 -2 110 5 T216 5"/></svg>
+        </div>
+        <div class="product-carousel reveal">
+          <button class="carousel-btn carousel-prev" data-prev="relatedGrid" aria-label="Produits précédents"></button>
+          <div class="product-carousel-viewport" id="relatedGrid"></div>
+          <button class="carousel-btn carousel-next" data-next="relatedGrid" aria-label="Produits suivants"></button>
+        </div>
+        <div class="carousel-progress"><div class="carousel-progress-bar" id="relatedGrid-progress"></div></div>
+      </div>
+    </section>
+  </section>
+
+  <!-- =========================================================
+       VIEW: CART  (#/cart)
+       ========================================================= -->
+  <section class="view" id="view-cart">
+    <div class="page-hero">
+      <div class="container">
+        <div class="breadcrumbs"><a href="#/">Accueil</a> / Panier</div>
+        <h1 class="display-2">Votre panier</h1>
+        <svg class="gold-stroke center reveal" viewBox="0 0 220 10"><path d="M4 5 Q60 -2 110 5 T216 5"/></svg>
+      </div>
+    </div>
+
+    <section class="section-tight">
+      <div class="container">
+        <div class="cart-page-grid">
+          <div>
+            <div id="cartPageBody"></div>
+          </div>
+
+          <aside class="cart-summary-card">
+            <h2 class="display-3">Récapitulatif</h2>
+            <div class="summary-row"><span>Sous-total</span><span id="sumSubtotal">0 FCFA</span></div>
+            <div class="summary-row"><span>Livraison</span><span id="sumShipping">—</span></div>
+            <div class="summary-row" id="sumPromoRow" style="display:none;"><span>Remise</span><span id="sumPromo">0 FCFA</span></div>
+            <div class="promo-row">
+              <input type="text" id="promoCode" aria-label="Code promo" placeholder="Code promo">
+              <button class="btn btn-ghost btn-sm" onclick="applyPromo()">Appliquer</button>
+            </div>
+            <div class="summary-row total"><span>Total</span><span class="val" id="sumTotal">0 FCFA</span></div>
+            <button class="btn btn-solid btn-block" id="checkoutToggle" style="margin-top:1rem;">Passer commande</button>
+            <p style="font-size:.72rem;color:var(--text-on-light-dim);margin-top:1rem;text-align:center;">Livraison offerte dès 100 000 FCFA d'achat.</p>
+          </aside>
+        </div>
+
+        <div id="checkoutForm" style="display:none;margin-top:var(--gap-xl);border-top:1px solid var(--line);padding-top:var(--gap-lg);">
+          <div class="section-head reveal">
+            <span class="eyebrow">Étape finale</span>
+            <h2 class="display-2">Informations de livraison</h2>
+          </div>
+          <form class="checkout-form" style="max-width:760px;margin:0 auto;" onsubmit="return guardedSubmitOrder(event)" novalidate>
+            <div class="full">
+              <label for="custName">Nom complet</label>
+              <input type="text" id="custName" required autocomplete="name">
+              <p class="field-error" id="err-custName" style="display:none;color:#b42828;font-size:.72rem;margin-top:.35rem;"></p>
+            </div>
+            <div>
+              <label for="custPhone">Téléphone</label>
+              <input type="tel" id="custPhone" required placeholder="+221 ..." autocomplete="tel">
+              <p class="field-error" id="err-custPhone" style="display:none;color:#b42828;font-size:.72rem;margin-top:.35rem;"></p>
+            </div>
+            <div>
+              <label for="custEmail">Email (facultatif)</label>
+              <input type="email" id="custEmail" placeholder="vous@exemple.com">
+            </div>
+            <div class="full">
+              <label for="custAddress">Adresse de livraison</label>
+              <input type="text" id="custAddress" required autocomplete="address-line1">
+              <p class="field-error" id="err-custAddress" style="display:none;color:#b42828;font-size:.72rem;margin-top:.35rem;"></p>
+            </div>
+            <div>
+              <label for="custCity">Ville</label>
+              <input type="text" id="custCity" required>
+              <p class="field-error" id="err-custCity" style="display:none;color:#b42828;font-size:.72rem;margin-top:.35rem;"></p>
+            </div>
+            <div class="full">
+              <label style="display:block;margin-bottom:.7rem;">Mode de livraison</label>
