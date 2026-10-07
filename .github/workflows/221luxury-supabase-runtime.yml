@@ -1,0 +1,46 @@
+name: 221 LUXURY - Supabase runtime
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/221luxury-supabase-runtime.yml'
+      - '221-luxury-supabase-runtime.js'
+      - 'supabase-config.js'
+      - 'index.html'
+
+jobs:
+  sync:
+    if: github.event.head_commit.message != 'chore: sync 221 LUXURY Supabase runtime'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ensure runtime script is loaded
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('index.html')
+          s=p.read_text(encoding='utf-8')
+          tag='<script src="./221-luxury-supabase-runtime.js"></script>'
+          if tag not in s:
+              marker='</body>'
+              if marker not in s:
+                  raise SystemExit('index.html: </body> not found')
+              s=s.replace(marker, tag+'\n'+marker, 1)
+              p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit runtime integration
+        shell: bash
+        run: |
+          if git diff --quiet -- index.html; then
+            echo 'No index.html change required.'
+            exit 0
+          fi
+          git config user.name '221 LUXURY Bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add index.html
+          git commit -m 'chore: sync 221 LUXURY Supabase runtime'
+          git push
