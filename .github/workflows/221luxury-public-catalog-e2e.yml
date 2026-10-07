@@ -38,7 +38,7 @@ jobs:
           const fs = require('fs');
           const html = fs.readFileSync('dist/index.html','utf8');
           if (!html.includes('221-luxury-supabase-runtime.js')) throw new Error('Live Supabase runtime missing from dist/index.html');
-          if (!html.includes('const PRODUCTS = []')) throw new Error('Static PRODUCTS array was not stripped from public build');
+          if (!html.includes('var PRODUCTS = []')) throw new Error('Static PRODUCTS array was not stripped from public build');
           const size = fs.statSync('dist/index.html').size;
           console.log(JSON.stringify({ok:true, distIndexBytes:size}));
           NODE
