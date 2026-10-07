@@ -463,6 +463,41 @@ input,select,textarea{font-family:inherit;font-size:14px}
   .toast{left:10px;right:10px;bottom:12px;text-align:center;}
   .dashboard-grid{grid-template-columns:1fr 1fr!important;}
 }
+
+/* ─── PHONE RESPONSIVE — does not alter desktop ───────── */
+@media (max-width:768px){
+  html,body{height:100%;overflow:hidden;}
+  #app{height:100dvh;min-height:100dvh;}
+  .topbar{height:auto;min-height:56px;padding:8px 10px;gap:8px;flex-wrap:wrap;}
+  .topbar-logo{font-size:9px;letter-spacing:.22em;}
+  .topbar-actions{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+  .topbar-actions .btn{padding:6px 9px;font-size:11px;}
+  .stats-bar{padding:8px 10px;gap:10px;}
+  .main-layout{min-height:0;flex-direction:column;}
+  .sidebar{width:100%;max-height:285px;height:auto;border-right:0;border-bottom:1px solid var(--border);}
+  .sidebar-header{padding:9px;gap:8px;}
+  #addProductBtn{min-height:42px;}
+  .sidebar-list{min-height:0;max-height:205px;padding:6px;}
+  .sidebar-item{padding:8px;}
+  .content{min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+  .editor{padding:12px;max-width:none;}
+  .editor-header{flex-wrap:wrap;gap:10px;margin-bottom:16px;padding-bottom:14px;}
+  .editor-title{font-size:17px;}
+  .editor-actions{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:7px;}
+  .editor-actions .btn{width:100%;justify-content:center;}
+  .editor > div[style*="grid-template-columns:1fr 240px"]{grid-template-columns:1fr!important;}
+  .section{padding:14px;margin-bottom:12px;}
+  .field-grid,.field-grid.cols-3{grid-template-columns:1fr!important;}
+  .color-add-row{align-items:stretch;}
+  .color-add-row input[type=text]{min-width:0;width:100%;}
+  .photo-card-body{align-items:stretch;}
+  .photo-card-actions{width:100%;margin-left:0;}
+  .photo-card-actions .btn{flex:1;}
+  .preview-modal{width:96vw;max-height:90dvh;}
+  .modal{width:94vw;}
+  .toast{left:10px;right:10px;bottom:12px;text-align:center;}
+  .dashboard-grid{grid-template-columns:1fr 1fr!important;}
+}
 </style>
   <script src="./supabase-config.js"></script>
 </head>
@@ -680,6 +715,7 @@ function renderDeliverySettings(){
 
 // Couleurs visuelles : { hex, label }  — PAS de photos ici
 let colorVariants = [];   // [{ hex:'#D4AF37', label:'Doré' }, ...]
+let activeColorIdx = 0;
 
 // Tailles
 let sizeList      = [];   // ['S','M','L','XL']
