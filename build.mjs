@@ -47,7 +47,7 @@ function prepareCatalogSeed(html){
   }
 
   const seed=JSON.stringify(products);
-  return html.slice(0,arrayStart)+seed.slice(1,-1)+html.slice(arrayEnd);
+  return html.slice(0,markerIndex)+'var PRODUCTS = '+seed+html.slice(arrayEnd+1);
 }
 
 ensureDir(DIST);
@@ -84,5 +84,5 @@ for(const name of [
 console.log('221 LUXURY build complete:',{
   originalBytes:Buffer.byteLength(original),
   publicBytes:Buffer.byteLength(publicHtml),
-  productCount:JSON.parse(publicHtml.match(/var PRODUCTS = ([\s\S]*?);/ )?.[1]||'[]').length
+  productCount:JSON.parse(publicHtml.match(/var PRODUCTS = ([\s\S]*?);/)?.[1]||'[]').length
 });
