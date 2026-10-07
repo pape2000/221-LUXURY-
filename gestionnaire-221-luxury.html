@@ -2848,7 +2848,9 @@ function downloadHTML(html){
     get user(){return currentUser;},
     get store(){return currentStore;},
     loadCatalog,
-    createProduct:async function(formData){return saveProductBundle(null,null,formData,true);}
+    createProduct:async function(formData){return saveProductBundle(null,null,formData,true);},
+    saveNew:saveNewSupabase,
+    showNewProduct:newProductViewSupabase
   };
 
   async function importLegacyFile(file){
