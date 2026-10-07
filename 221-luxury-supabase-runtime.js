@@ -3,6 +3,14 @@
   if (window.__221LUXURY_SUPABASE_RUNTIME__) return;
   window.__221LUXURY_SUPABASE_RUNTIME__ = true;
 
+  if(!window.__221LUXURY_SUPABASE__){
+    // Browser-safe publishable configuration fallback so the public catalog
+    // never depends on the external config file being executed first.
+    window.__221LUXURY_SUPABASE__={
+      url:'https://shvgcroqovnhltpzceid.supabase.co',
+      publishableKey:'sb_publishable_t3OcJB8q9BXNcMX2Wt0ngw_xvoms06r'
+    };
+  }
   const CONFIG_SRC = '/supabase-config.js?v=public-build-1';
   const SUPABASE_SRC = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
   const BUCKET = 'product-images';
@@ -104,6 +112,137 @@
     }catch(e){ console.error('221 LUXURY above-fold media prioritization error',e); }
   }
 
+  function cleanTemplateArtifacts(){
+    try{
+      document.querySelectorAll('img[src]').forEach(function(img){
+        if(img.getAttribute('src')==='
+    if(!root) return;
+    const imgs=[...root.querySelectorAll('img')].filter(function(img){return !!img.src;});
+    if(!imgs.length) return;
+    let cursor=0;
+    const size=batchSize||4;
+    const step=function(){
+      const batch=imgs.slice(cursor,cursor+size);
+      if(!batch.length) return;
+      cursor+=batch.length;
+      batch.forEach(function(img,index){
+        img.loading='eager';
+        img.decoding='async';
+        img.fetchPriority=(cursor<=size&&index===0)?'high':'low';
+      });
+      Promise.all(batch.map(function(img){
+        return img.complete?Promise.resolve():new Promise(function(resolve){
+          img.addEventListener('load',resolve,{once:true});
+          img.addEventListener('error',resolve,{once:true});
+        });
+      })).then(function(){setTimeout(step,0);});
+    };
+    step();
+  }
+
+  function repaint(){
+    try{
+      cleanTemplateArtifacts();
+      const cats=[...new Set((PRODUCTS||[]).flatMap(function(p){
+        return (Array.isArray(p.categories)&&p.categories.length?p.categories:(p.category?[p.category]:[])).filter(Boolean);
+      }))];
+      if(typeof CATEGORIES!=='undefined' && Array.isArray(CATEGORIES)){
+        CATEGORIES.splice(0,CATEGORIES.length,...cats);
+      }
+      if(typeof CATEGORIES_COMING_SOON!=='undefined' && Array.isArray(CATEGORIES_COMING_SOON)){
+        CATEGORIES_COMING_SOON.splice(0,CATEGORIES_COMING_SOON.length);
+      }
+      if(typeof renderManagedCategoryTiles==='function') renderManagedCategoryTiles();
+      if(typeof renderCategoryFilters==='function' && typeof shopState!=='undefined') renderCategoryFilters();
+      if(typeof renderProductGrid==='function'){
+        const novelty=(PRODUCTS||[]).filter(function(p){return p&&(p.isNew===true||p.badge==='Nouveau'||p.badge==='Nouveauté'||p.badge==='Nouveaute');});
+        if(document.getElementById('homeNouveautesGrid')){renderProductGrid('homeNouveautesGrid',novelty); if(typeof initProductCarousel==='function') initProductCarousel('homeNouveautesGrid');}
+        if(document.getElementById('homeGrid')){renderProductGrid('homeGrid',PRODUCTS); if(typeof initProductCarousel==='function') initProductCarousel('homeGrid');}
+        if(document.getElementById('bestsellersGrid')){renderProductGrid('bestsellersGrid',PRODUCTS); if(typeof initProductCarousel==='function') initProductCarousel('bestsellersGrid');}
+      }
+      if(typeof applyShopFilters==='function' && typeof shopState!=='undefined' && document.getElementById('shopGrid')) applyShopFilters();
+      if(typeof renderRoute==='function') renderRoute();
+      prioritizeAboveFoldMedia();
+      const categoryRoot=document.getElementById('managedCategoryGrid');
+      if(categoryRoot) loadImagesProgressively(categoryRoot,4);
+      setTimeout(function(){
+        ['homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'].forEach(function(id){
+          const root=document.getElementById(id);
+          if(root) loadImagesProgressively(root,4);
+        });
+      },120);
+    }catch(e){ console.error('221 LUXURY Supabase repaint error',e); }
+  }
+
+  async function fetchAndApply(client){
+    const storeResult=await client.from('stores').select('id,slug,is_active').eq('slug',STORE_SLUG).eq('is_active',true).maybeSingle();
+    if(storeResult.error) throw storeResult.error;
+    if(!storeResult.data){ console.warn('221 LUXURY: store not created yet; keeping current catalog.'); return; }
+
+    const result=await client.from('products').select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)').eq('store_id',storeResult.data.id).eq('published',true).order('created_at',{ascending:false});
+    if(result.error) throw result.error;
+    if(typeof PRODUCTS==='undefined' || !Array.isArray(PRODUCTS)) return;
+    const next=(result.data||[]).map(function(row){return normalize(row,client);});
+    PRODUCTS.splice(0,PRODUCTS.length,...next);
+    repaint();
+    document.documentElement.dataset.supabaseCatalog='ready';
+    return next;
+  }
+
+  async function init(){
+    try{
+      // The production page normally has these resources already, but the
+      // runtime remains safe when opened by itself as well.
+      await loadScript(CONFIG_SRC);
+      await loadScript(SUPABASE_SRC);
+      const client=buildClient();
+      await fetchAndApply(client);
+
+      let refreshTimer=null;
+      let refreshing=false;
+      const scheduleRefresh=function(){
+        clearTimeout(refreshTimer);
+        refreshTimer=setTimeout(async function(){
+          if(refreshing) return;
+          refreshing=true;
+          try{ await fetchAndApply(client); }
+          catch(e){ console.error('221 LUXURY Supabase live refresh failed',e); }
+          finally{ refreshing=false; }
+        },700);
+      };
+
+      const channel=client.channel('221-luxury-public-catalog')
+        .on('postgres_changes',{event:'*',schema:'public',table:'products'},scheduleRefresh)
+        .on('postgres_changes',{event:'*',schema:'public',table:'product_colors'},scheduleRefresh)
+        .on('postgres_changes',{event:'*',schema:'public',table:'product_variants'},scheduleRefresh)
+        .on('postgres_changes',{event:'*',schema:'public',table:'product_images'},scheduleRefresh)
+        .subscribe(function(status){
+          if(status!=='SUBSCRIBED') console.warn('221 LUXURY realtime status:',status);
+        });
+
+      window.addEventListener('beforeunload',function(){
+        try{ client.removeChannel(channel); }catch(e){}
+      },{once:true});
+    }catch(e){
+      console.error('221 LUXURY Supabase catalog load failed',e);
+    }
+  }
+
+  // Start as soon as the DOM is ready. Waiting for window 'load' would
+  // unnecessarily wait for the hero video and all images, which can delay
+  // the live Supabase catalog indefinitely on slower phones.
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',function(){setTimeout(init,0);},{once:true});
+  }else{
+    setTimeout(init,0);
+  }
+})();+'{p.img}'){
+          img.removeAttribute('src');
+          img.removeAttribute('srcset');
+        }
+      });
+    }catch(e){ console.error('221 LUXURY template artifact cleanup error',e); }
+  }
   function loadImagesProgressively(root, batchSize){
     if(!root) return;
     const imgs=[...root.querySelectorAll('img')].filter(function(img){return !!img.src;});
