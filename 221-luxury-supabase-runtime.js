@@ -163,7 +163,6 @@
         if(document.getElementById('bestsellersGrid')){renderProductGrid('bestsellersGrid',PRODUCTS); if(typeof initProductCarousel==='function') initProductCarousel('bestsellersGrid');}
       }
       if(typeof applyShopFilters==='function' && typeof shopState!=='undefined' && document.getElementById('shopGrid')) applyShopFilters();
-      if(typeof renderRoute==='function') renderRoute();
       prioritizeAboveFoldMedia();
       const categoryRoot=document.getElementById('managedCategoryGrid');
       const productRoots=['homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'];
@@ -187,16 +186,45 @@
     if(storeResult.error) throw storeResult.error;
     if(!storeResult.data){ console.warn('221 LUXURY: store not created yet; keeping current catalog.'); return; }
 
-    const result=await client.from('products').select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)').eq('store_id',storeResult.data.id).eq('published',true).order('created_at',{ascending:false});
-    if(result.error) throw result.error;
-    if(typeof PRODUCTS==='undefined' || !Array.isArray(PRODUCTS)){
-      throw new Error('Public PRODUCTS binding is unavailable to Supabase runtime.');
-    }
-    const next=(result.data||[]).map(function(row){return normalize(row,client);});
-    PRODUCTS.splice(0,PRODUCTS.length,...next);
-    repaint();
+    const PAGE_SIZE=4;
+    let offset=0;
+    let firstBatch=true;
+    let lastBatchSize=0;
+
+    do{
+      const result=await client
+        .from('products')
+        .select('id,store_id,slug,name,description,details,price,old_price,stock,stock_threshold,category,categories,badge,is_new,published,rating,reviews,personalization,photo_personalization,product_colors(id,name,hex,sort_order),product_variants(id,color_id,size,price,old_price,stock,sort_order),product_images(id,color_id,variant_id,storage_path,is_cover,sort_order)')
+        .eq('store_id',storeResult.data.id)
+        .eq('published',true)
+        .order('created_at',{ascending:false})
+        .range(offset,offset+PAGE_SIZE-1);
+
+      if(result.error) throw result.error;
+      if(typeof PRODUCTS==='undefined' || !Array.isArray(PRODUCTS)){
+        throw new Error('Public PRODUCTS binding is unavailable to Supabase runtime.');
+      }
+
+      const batch=(result.data||[]).map(function(row){return normalize(row,client);});
+      lastBatchSize=batch.length;
+
+      if(firstBatch){
+        PRODUCTS.splice(0,PRODUCTS.length,...batch);
+        firstBatch=false;
+      }else if(batch.length){
+        PRODUCTS.push(...batch);
+      }
+
+      if(batch.length){
+        repaint();
+        await new Promise(function(resolve){setTimeout(resolve,0);});
+      }
+
+      offset+=batch.length;
+    }while(lastBatchSize===PAGE_SIZE);
+
     document.documentElement.dataset.supabaseCatalog='ready';
-    return next;
+    return PRODUCTS.slice();
   }
 
   async function init(){
