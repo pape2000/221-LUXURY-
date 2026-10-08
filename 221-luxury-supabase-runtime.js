@@ -271,6 +271,101 @@
     }catch(e){ console.error('221 LUXURY Supabase repaint error',e); }
   }
 
+  function stabilizeProductRendering(){
+    try{
+      if(typeof window.renderProductGrid!=='function' || window.__221LUXURY_STABLE_GRID__) return;
+      const original=window.renderProductGrid;
+      window.__221LUXURY_STABLE_GRID__=true;
+
+      const signature=function(p){
+        return JSON.stringify({
+          id:p&&p.id,
+          name:p&&p.name,
+          img:p&&p.img,
+          price:p&&p.price,
+          oldPrice:p&&p.oldPrice,
+          badge:p&&p.badge,
+          colors:p&&p.colors,
+          stock:p&&p.stock,
+          rating:p&&p.rating,
+          category:p&&p.category,
+          displayPrice:typeof formatProductDisplayPrice==='function'?formatProductDisplayPrice(p):null
+        });
+      };
+
+      window.renderProductGrid=function(containerId,products){
+        const el=document.getElementById(containerId);
+        if(!el){ original(containerId,products); return; }
+
+        const list=Array.isArray(products)?products:[];
+        if(!list.length){
+          if(el.children.length!==1 || !el.firstElementChild || !el.firstElementChild.textContent.includes('Aucun produit')){
+            original(containerId,list);
+          }
+          return;
+        }
+
+        const existing=[...el.children].filter(function(node){
+          return node.classList && node.classList.contains('product-card');
+        });
+        const byId=new Map();
+
+        existing.forEach(function(card){
+          const link=card.querySelector('a[href*="#/product?id="]');
+          if(!link) return;
+          const match=(link.getAttribute('href')||'').match(/#\/product\?id=([^&]+)/);
+          if(match) byId.set(decodeURIComponent(match[1]),card);
+        });
+
+        const used=new Set();
+        let cursor=el.firstElementChild;
+
+        list.forEach(function(p,i){
+          const id=String(p&&p.id!=null?p.id:'');
+          let card=byId.get(id);
+
+          if(!card){
+            const holder=document.createElement('div');
+            holder.innerHTML=productCardHtml(p,'reveal-delay-'+((i%4)+1));
+            card=holder.firstElementChild;
+            if(!card) return;
+            el.insertBefore(card,cursor);
+            initRevealOnScroll();
+          }else{
+            const nextSignature=signature(p);
+            if(card.dataset.renderSignature!==nextSignature){
+              const holder=document.createElement('div');
+              holder.innerHTML=productCardHtml(p,'reveal-delay-'+((i%4)+1));
+              const fresh=holder.firstElementChild;
+              if(fresh){
+                const wasVisible=card.classList.contains('is-visible');
+                card.innerHTML=fresh.innerHTML;
+                card.className=fresh.className;
+                if(wasVisible) card.classList.add('is-visible');
+              }
+              card.dataset.renderSignature=nextSignature;
+            }
+            if(card!==cursor) el.insertBefore(card,cursor);
+          }
+
+          card.dataset.renderSignature=signature(p);
+          used.add(card);
+
+          const next=card.nextElementSibling;
+          cursor=next;
+        });
+
+        [...el.children].forEach(function(node){
+          if(node.classList && node.classList.contains('product-card') && !used.has(node)){
+            node.remove();
+          }
+        });
+      };
+    }catch(e){
+      console.error('221 LUXURY stable product rendering error',e);
+    }
+  }
+
   async function fetchAndApply(client){
     const storeResult=await client.from('stores').select('id,slug,is_active').eq('slug',STORE_SLUG).eq('is_active',true).maybeSingle();
     if(storeResult.error) throw storeResult.error;
@@ -344,6 +439,7 @@
         await loadScript(SUPABASE_SRC);
       }
       const client=buildClient();
+      stabilizeProductRendering();
       window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='fetching_catalog';
       await fetchAndApply(client);
       window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='ready';
