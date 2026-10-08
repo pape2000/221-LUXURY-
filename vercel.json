@@ -7,10 +7,6 @@
     {
       "source": "/gestionnaire/",
       "destination": "/gestionnaire-shell.html"
-    },
-    {
-      "source": "/",
-      "destination": "/api/public"
     }
   ],
   "headers": [
