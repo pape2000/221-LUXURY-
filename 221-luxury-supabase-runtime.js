@@ -143,6 +143,92 @@
     });
   }
 
+  function installStableProductGridRenderer(){
+    if(typeof renderProductGrid!=='function' || window.__221LUXURY_STABLE_GRID_RENDERER__) return;
+    window.__221LUXURY_STABLE_GRID_RENDERER__=true;
+
+    function preloadCardImages(card){
+      const images=[...card.querySelectorAll('img')].map(function(img){
+        return img.currentSrc || img.src || '';
+      }).filter(Boolean);
+      return Promise.all(images.map(function(src){
+        return new Promise(function(resolve){
+          const probe=new Image();
+          probe.onload=resolve;
+          probe.onerror=resolve;
+          probe.src=src;
+        });
+      }));
+    }
+
+    function stableRender(containerId, products){
+      const el=document.getElementById(containerId);
+      if(!el) return;
+
+      if(!products.length){
+        if(el.children.length!==1 || !el.firstElementChild || el.firstElementChild.textContent!=='Aucun produit ne correspond à votre recherche.'){
+          el.innerHTML='<p style="grid-column:1/-1;text-align:center;color:var(--muted);padding:3rem 0;">Aucun produit ne correspond à votre recherche.</p>';
+        }
+        return;
+      }
+
+      const existing=[...el.children].filter(function(node){
+        return node.classList && node.classList.contains('product-card');
+      });
+      const byId=new Map(existing.map(function(card){
+        const link=card.querySelector('a[href*="#/product?id="]');
+        const href=link&&link.getAttribute('href')||'';
+        return [href.split('id=')[1]||'',card];
+      }));
+
+      products.forEach(function(product,index){
+        const id=String(product.id||'');
+        let card=byId.get(id);
+
+        if(!card){
+          const holder=document.createElement('div');
+          holder.innerHTML=productCardHtml(product,'reveal-delay-'+((index%4)+1)).trim();
+          const fresh=holder.firstElementChild;
+          if(!fresh) return;
+          fresh.classList.add('is-visible');
+          fresh.dataset.stableRenderKey=JSON.stringify(product);
+          el.appendChild(fresh);
+          return;
+        }
+
+        const key=JSON.stringify(product);
+        if(card.dataset.stableRenderKey===key){
+          const desiredClass='product-card reveal reveal-delay-'+((index%4)+1);
+          const wasVisible=card.classList.contains('is-visible');
+          card.className=desiredClass+(wasVisible?' is-visible':'');
+          return;
+        }
+
+        const holder=document.createElement('div');
+        holder.innerHTML=productCardHtml(product,'reveal-delay-'+((index%4)+1)).trim();
+        const fresh=holder.firstElementChild;
+        if(!fresh) return;
+        fresh.dataset.stableRenderKey=key;
+        if(card.classList.contains('is-visible')) fresh.classList.add('is-visible');
+
+        preloadCardImages(fresh).then(function(){
+          if(card.isConnected) card.replaceWith(fresh);
+        });
+      });
+
+      const keep=new Set(products.map(function(p){return String(p.id||'');}));
+      [...el.children].forEach(function(card){
+        if(!card.classList.contains('product-card')) return;
+        const link=card.querySelector('a[href*="#/product?id="]');
+        const href=link&&link.getAttribute('href')||'';
+        const id=href.split('id=')[1]||'';
+        if(!keep.has(id)) card.remove();
+      });
+    }
+
+    window.renderProductGrid=stableRender;
+  }
+
   function repaint(){
     try{
       const cats=[...new Set((PRODUCTS||[]).flatMap(function(p){
@@ -246,6 +332,7 @@
   }
 
   async function init(){
+    installStableProductGridRenderer();
     try{
       window.__221LUXURY_SUPABASE_RUNTIME_STATUS__.state='initializing';
       // The production page normally has these resources already, but the
