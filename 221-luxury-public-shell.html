@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>221 LUXURY</title>
   <style>
-    html,body{margin:0;width:100%;min-height:100%;background:#fff}
+    html,body{margin:0;width:100%;height:100%;background:#fff}
     #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;font:600 14px/1.4 system-ui,sans-serif;color:#222;z-index:10}
   </style>
 </head>
@@ -14,30 +14,76 @@
 <script>
 (async function(){
   'use strict';
-  try{
+
+  const RENDERER='https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury?v=live-final-2';
+  const FALLBACK='/static-index.html?fallback=public-2';
+
+  function prepare(html){
+    /* The user owns the scroll position: remove the route-level auto jump. */
+    html=html.replace(
+      /window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant' in window \? 'instant' : 'auto'\s*\}\);\s*/g,
+      ''
+    );
+
+    /* Never make the first paint wait for locale/rate network calls. */
+    html=html.replace(
+      /async function boot\(\)\{\s*bind\(\);\s*if\(!state\.manual\)\{\s*state\.country=await detectCountry\(\);\s*save\(\);\s*\}\s*await refreshRates\(\);\s*rerender\(\);/s,
+      `async function boot(){
+  bind();
+  rerender();
+  if(!state.manual){
+    detectCountry().then(country=>{
+      state.country=country;
+      save();
+      rerender();
+    }).catch(()=>{});
+  }
+  refreshRates().then(()=>rerender()).catch(()=>{});`
+    );
+
+    /* The fallback file is local and therefore needs the live Supabase runtime injected. */
+    if(!html.includes('221-luxury-supabase-runtime.js')){
+      const body=html.lastIndexOf('</body>');
+      if(body>=0){
+        html=html.slice(0,body)+`
+<script src="/supabase-config.js?v=public-build-2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/221-luxury-supabase-runtime.js?v=public-build-2"></script>
+`+html.slice(body);
+      }
+    }
+    return html;
+  }
+
+  async function fetchWithTimeout(url,ms){
     const controller=new AbortController();
-    const timeout=setTimeout(()=>controller.abort(),12000);
-    const r=await fetch('/static-index.html?v=public-shell-2',{cache:'no-store',signal:controller.signal});
-    clearTimeout(timeout);
-    if(!r.ok) throw new Error('Static storefront HTTP '+r.status);
-    let html=await r.text();
+    const timer=setTimeout(()=>controller.abort(),ms);
+    try{
+      const r=await fetch(url,{cache:'no-store',signal:controller.signal});
+      if(!r.ok) throw new Error('HTTP '+r.status);
+      return await r.text();
+    }finally{
+      clearTimeout(timer);
+    }
+  }
 
-    /* Exterminate the automatic route scroll without touching explicit checkout scrolling elsewhere. */
-    html=html.replace(/\s*window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant'\s*in\s*window\s*\?\s*'instant'\s*:\s*'auto'\s*\}\);\s*/,'\n');
+  try{
+    let html;
+    try{
+      html=await fetchWithTimeout(RENDERER,5000);
+    }catch(rendererError){
+      console.warn('[221 LUXURY] live renderer unavailable, using local public fallback',rendererError);
+      html=await fetchWithTimeout(FALLBACK,15000);
+    }
 
-    /* Supabase stays the source of truth and refreshes the catalog in the background. */
-    const runtime='<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>\n<script src="/221-luxury-supabase-runtime.js?v=public-progressive-2"><\/script>';
-    html=html.replace('</body>',runtime+'\n</body>');
-
+    html=prepare(html);
     document.open();
     document.write(html);
     document.close();
-  }catch(e){
-    console.error('[221 LUXURY] public storefront load failed',e);
+  }catch(error){
+    console.error('[221 LUXURY] public shell failed',error);
     const el=document.getElementById('loader');
-    if(el) el.textContent=e&&e.name==='AbortError'
-      ? 'Le chargement de 221 LUXURY prend trop de temps. Veuillez actualiser.'
-      : 'Impossible de charger 221 LUXURY.';
+    if(el) el.textContent='Impossible de charger 221 LUXURY.';
   }
 })();
 </script>
