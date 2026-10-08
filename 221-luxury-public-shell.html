@@ -15,64 +15,23 @@
 (async function(){
   'use strict';
 
-  const STATIC_SOURCE='/static-index.html';
-  const RUNTIME_TAG='<script src="/221-luxury-supabase-runtime.js?v=live-final-2"><\/script>';
-  const CONFIG_TAG='<script src="/supabase-config.js?v=live-final"><\/script>';
-  const BOOTSTRAP=[
-    '<script>',
-    "window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};",
-    "(function(){const native=window.scrollTo;window.scrollTo=function(x,y){if(typeof x==='object'&&x&&Number(x.top)===0)return;if(typeof x==='number'&&Number(x)===0&&Number(y)===0)return;return native.apply(this,arguments);};})();",
-    '<\/script>',
-    CONFIG_TAG,
-    RUNTIME_TAG
-  ].join('\n');
-
+  const SOURCE='https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury?v=live-8';
   try{
-    const response=await fetch(STATIC_SOURCE,{cache:'no-store'});
-    if(!response.ok) throw new Error('Static storefront HTTP '+response.status);
-    if(!response.body) throw new Error('Static storefront stream unavailable');
-
-    const reader=response.body.getReader();
-    const decoder=new TextDecoder();
-    let buffer='';
-    let started=false;
-    let opened=false;
-
-    function write(value){
-      if(!opened){ document.open(); opened=true; }
-      document.write(value);
-    }
-
-    while(true){
-      const part=await reader.read();
-      if(part.done) break;
-      buffer+=decoder.decode(part.value,{stream:true});
-
-      if(!started){
-        const marker='</head>';
-        const i=buffer.indexOf(marker);
-        if(i===-1){
-          if(buffer.length>262144){
-            write(buffer);
-            buffer='';
-          }
-          continue;
-        }
-        write(buffer.slice(0,i)+BOOTSTRAP+buffer.slice(i));
-        buffer='';
-        started=true;
-      }else{
-        write(buffer);
-        buffer='';
-      }
-    }
-
-    buffer+=decoder.decode();
-    if(buffer) write(buffer);
-    if(!started && buffer) throw new Error('HEAD marker not found in storefront');
+    const controller=new AbortController();
+    const timeout=setTimeout(function(){controller.abort();},15000);
+    const response=await fetch(SOURCE,{cache:'no-store',signal:controller.signal});
+    clearTimeout(timeout);
+    if(!response.ok) throw new Error('Public storefront HTTP '+response.status);
+    const html=await response.text();
+    const cleaned=html.replace(
+      /window\\.scrollTo\\(\\{\\s*top:\\s*0,\\s*behavior:\\s*'instant' in window \\? 'instant' : 'auto'\\s*\\}\\);\\s*/g,
+      ''
+    );
+    document.open();
+    document.write(cleaned);
     document.close();
   }catch(error){
-    console.error('[221 LUXURY] public storefront stream failed',error);
+    console.error('[221 LUXURY] public storefront failed',error);
     const el=document.getElementById('loader');
     if(el) el.textContent='Impossible de charger 221 LUXURY.';
   }
