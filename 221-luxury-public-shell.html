@@ -4,36 +4,97 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>221 LUXURY</title>
-  <style>
-    html,body{margin:0;width:100%;min-height:100%;background:#fff}
-    #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;font:600 14px/1.4 system-ui,sans-serif;color:#222;z-index:10}
-  </style>
 </head>
 <body>
-<div id="loader">Chargement de 221 LUXURY…</div>
 <script>
 (async function(){
   'use strict';
 
-  const SOURCE='https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury?v=live-8';
+  const SOURCE='/static-index.html?v=public-direct-1';
+  const RUNTIME=
+    '<script src="/supabase-config.js?v=public-direct-1"><\\/script>' +
+    '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\\/script>' +
+    '<script src="/221-luxury-supabase-runtime.js?v=public-direct-1"><\\/script>';
+
+  const PRELUDE =
+    '<script>' +
+    'var handleFirebaseRedirect=window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};' +
+    '(function(){' +
+      'var native=window.scrollTo;' +
+      'window.scrollTo=function(x,y){' +
+        'if(typeof x==="object"&&x&&Number(x.top)===0)return;' +
+        'if(typeof x==="number"&&Number(x)===0&&Number(y)===0)return;' +
+        'return native.apply(this,arguments);' +
+      '};' +
+    '})();' +
+    '<\\/script>';
+
+  const SCROLL_RE=/window\\.scrollTo\\(\\{\\s*top:\\s*0,\\s*behavior:\\s*'instant' in window \\? 'instant' : 'auto'\\s*\\}\\);\\s*/g;
+
   try{
-    const controller=new AbortController();
-    const timeout=setTimeout(function(){controller.abort();},15000);
-    const response=await fetch(SOURCE,{cache:'no-store',signal:controller.signal});
-    clearTimeout(timeout);
-    if(!response.ok) throw new Error('Public storefront HTTP '+response.status);
-    const html=await response.text();
-    const cleaned=html.replace(
-      /window\\.scrollTo\\(\\{\\s*top:\\s*0,\\s*behavior:\\s*'instant' in window \\? 'instant' : 'auto'\\s*\\}\\);\\s*/g,
-      ''
-    );
+    const response=await fetch(SOURCE,{cache:'no-store'});
+    if(!response.ok) throw new Error('Static storefront HTTP '+response.status);
+    if(!response.body) throw new Error('Static storefront stream unavailable');
+
+    const reader=response.body.getReader();
+    const decoder=new TextDecoder();
+    let buffer='';
+    let injected=false;
+
     document.open();
-    document.write(cleaned);
+
+    while(true){
+      const part=await reader.read();
+      if(part.done) break;
+      buffer+=decoder.decode(part.value,{stream:true});
+
+      if(!injected){
+        const marker='</head>';
+        const index=buffer.indexOf(marker);
+
+        if(index===-1){
+          if(buffer.length>65536){
+            const cut=buffer.length-16384;
+            document.write(buffer.slice(0,cut));
+            buffer=buffer.slice(cut);
+          }
+          continue;
+        }
+
+        const headOpen=buffer.indexOf('<head>');
+        if(headOpen===-1) throw new Error('HEAD_OPEN_NOT_FOUND');
+        const headOpenEnd=headOpen+6;
+
+        document.write(
+          buffer.slice(0,headOpenEnd) +
+          PRELUDE +
+          buffer.slice(headOpenEnd,index) +
+          RUNTIME +
+          buffer.slice(index)
+        );
+
+        buffer='';
+        injected=true;
+      }else if(buffer.length>16384){
+        const cut=buffer.length-16384;
+        document.write(buffer.slice(0,cut).replace(SCROLL_RE,''));
+        buffer=buffer.slice(cut);
+      }
+    }
+
+    buffer+=decoder.decode();
+
+    if(!injected){
+      throw new Error('PUBLIC_HEAD_NOT_FOUND');
+    }
+
+    buffer=buffer.replace(SCROLL_RE,'');
+    document.write(buffer);
     document.close();
   }catch(error){
     console.error('[221 LUXURY] public storefront failed',error);
-    const el=document.getElementById('loader');
-    if(el) el.textContent='Impossible de charger 221 LUXURY.';
+    try{document.close();}catch(e){}
+    document.body.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;background:#fff;color:#222;font:500 15px system-ui,sans-serif">Impossible de charger 221 LUXURY.</main>';
   }
 })();
 </script>
