@@ -10,7 +10,7 @@
     },
     {
       "source": "/",
-      "destination": "/221-luxury-public-shell.html"
+      "destination": "/api/public"
     }
   ],
   "headers": [
