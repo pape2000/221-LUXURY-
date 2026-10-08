@@ -29,7 +29,7 @@
     '})();' +
     '<\\/script>';
 
-  const SCROLL_RE=/window\\.scrollTo\\(\\{\\s*top:\\s*0,\\s*behavior:\\s*'instant' in window \\? 'instant' : 'auto'\\s*\\}\\);\\s*/g;
+  const SCROLL_RE=/window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant' in window \? 'instant' : 'auto'\s*\}\);\s*/g;
 
   try{
     const response=await fetch(SOURCE,{cache:'no-store'});
