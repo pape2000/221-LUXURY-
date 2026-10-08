@@ -11,6 +11,7 @@ on:
       - 221-luxury-supabase-runtime.js
       - supabase-config.js
       - vercel.json
+      - api/public.js
       - .github/workflows/221luxury-public-catalog-e2e.yml
 
 jobs:
