@@ -5,96 +5,64 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>221 LUXURY</title>
 </head>
-<body>
+<body style="margin:0;background:#fff">
 <script>
 (async function(){
   'use strict';
 
-  const SOURCE='/static-index.html?v=public-direct-1';
-  const RUNTIME=
-    '<script src="/supabase-config.js?v=public-direct-1"><\\/script>' +
-    '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\\/script>' +
-    '<script src="/221-luxury-supabase-runtime.js?v=public-direct-1"><\\/script>';
-
-  const PRELUDE =
-    '<script>' +
-    'var handleFirebaseRedirect=window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};' +
-    '(function(){' +
-      'var native=window.scrollTo;' +
-      'window.scrollTo=function(x,y){' +
-        'if(typeof x==="object"&&x&&Number(x.top)===0)return;' +
-        'if(typeof x==="number"&&Number(x)===0&&Number(y)===0)return;' +
-        'return native.apply(this,arguments);' +
-      '};' +
-    '})();' +
-    '<\\/script>';
-
-  const SCROLL_RE=/window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant' in window \? 'instant' : 'auto'\s*\}\);\s*/g;
+  const SOURCE='/static-index.html?v=public-progressive-6';
+  const KEEP=8192;
+  const RUNTIME=`
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\\/script>
+<script src="/221-luxury-supabase-runtime.js?v=public-progressive-6"><\\/script>
+`;
 
   try{
-    const response=await fetch(SOURCE,{cache:'no-store'});
+    const controller=new AbortController();
+    const timeout=setTimeout(function(){controller.abort();},30000);
+    const response=await fetch(SOURCE,{cache:'no-store',signal:controller.signal});
+    clearTimeout(timeout);
     if(!response.ok) throw new Error('Static storefront HTTP '+response.status);
     if(!response.body) throw new Error('Static storefront stream unavailable');
 
     const reader=response.body.getReader();
     const decoder=new TextDecoder();
-    let buffer='';
-    let injected=false;
+    let tail='';
 
     document.open();
 
     while(true){
       const part=await reader.read();
       if(part.done) break;
-      buffer+=decoder.decode(part.value,{stream:true});
+      tail+=decoder.decode(part.value,{stream:true});
 
-      if(!injected){
-        const marker='</head>';
-        const index=buffer.indexOf(marker);
-
-        if(index===-1){
-          if(buffer.length>65536){
-            const cut=buffer.length-16384;
-            document.write(buffer.slice(0,cut));
-            buffer=buffer.slice(cut);
-          }
-          continue;
-        }
-
-        const headOpen=buffer.indexOf('<head>');
-        if(headOpen===-1) throw new Error('HEAD_OPEN_NOT_FOUND');
-        const headOpenEnd=headOpen+6;
-
-        document.write(
-          buffer.slice(0,headOpenEnd) +
-          PRELUDE +
-          buffer.slice(headOpenEnd,index) +
-          RUNTIME +
-          buffer.slice(index)
-        );
-
-        buffer='';
-        injected=true;
-      }else if(buffer.length>16384){
-        const cut=buffer.length-16384;
-        document.write(buffer.slice(0,cut).replace(SCROLL_RE,''));
-        buffer=buffer.slice(cut);
+      if(tail.length>KEEP){
+        const cut=tail.length-KEEP;
+        document.write(tail.slice(0,cut));
+        tail=tail.slice(cut);
       }
     }
 
-    buffer+=decoder.decode();
+    tail+=decoder.decode();
 
-    if(!injected){
-      throw new Error('PUBLIC_HEAD_NOT_FOUND');
+    tail=tail.replace(
+      /window\\.scrollTo\\(\\{\\s*top:\\s*0,\\s*behavior:\\s*'instant' in window \\? 'instant' : 'auto'\\s*\\}\\);\\s*/g,
+      ''
+    );
+
+    const bodyIndex=tail.lastIndexOf('</body>');
+    if(bodyIndex>=0){
+      tail=tail.slice(0,bodyIndex)+RUNTIME+tail.slice(bodyIndex);
+    }else{
+      tail+=RUNTIME;
     }
 
-    buffer=buffer.replace(SCROLL_RE,'');
-    document.write(buffer);
+    document.write(tail);
     document.close();
   }catch(error){
     console.error('[221 LUXURY] public storefront failed',error);
     try{document.close();}catch(e){}
-    document.body.innerHTML='<main style="min-height:100vh;display:grid;place-items:center;background:#fff;color:#222;font:500 15px system-ui,sans-serif">Impossible de charger 221 LUXURY.</main>';
+    document.body.innerHTML='';
   }
 })();
 </script>
