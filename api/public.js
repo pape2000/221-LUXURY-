@@ -21,15 +21,7 @@ export default async function handler(req, res) {
 
     const prelude = `<script>window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};(function(){const native=window.scrollTo;window.scrollTo=function(x,y){if(typeof x==='object'&&x&&Number(x.top)===0)return;if(typeof x==='number'&&Number(x)===0&&Number(y)===0)return;return native.apply(this,arguments);};})();<\/script>`;
 
-    const injection = `<script>
-(function(){
-  window.scrollTo=function(x,y){
-    if(typeof x==='object'&&x&&Number(x.top)===0)return;
-    if(typeof x==='number'&&Number(x)===0&&Number(y)===0)return;
-    return native.apply(this,arguments);
-  };
-})();
-</script>
+    const injection = `
 <script src="/supabase-config.js?v=live-final"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="/221-luxury-supabase-runtime.js?v=live-final-2"></script>
