@@ -15,75 +15,70 @@
 (async function(){
   'use strict';
 
-  const RENDERER='https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury?v=live-final-2';
-  const FALLBACK='/static-index.html?fallback=public-2';
+  const SOURCE='/static-index.html?v=stream-public-1';
+  const KEEP=131072;
+  const RUNTIME=`
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/221-luxury-supabase-runtime.js?v=public-progressive-4"></script>
+`;
 
-  function prepare(html){
-    /* The user owns the scroll position: remove the route-level auto jump. */
-    html=html.replace(
+  try{
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),30000);
+    const response=await fetch(SOURCE,{cache:'no-store',signal:controller.signal});
+    clearTimeout(timeout);
+    if(!response.ok) throw new Error('Static storefront HTTP '+response.status);
+    if(!response.body) throw new Error('Static storefront stream unavailable');
+
+    const reader=response.body.getReader();
+    const decoder=new TextDecoder();
+    let tail='';
+    let firstPaint=false;
+
+    document.open();
+
+    while(true){
+      const part=await reader.read();
+      if(part.done) break;
+
+      tail+=decoder.decode(part.value,{stream:true});
+
+      if(tail.length>KEEP){
+        const cut=tail.length-KEEP;
+        document.write(tail.slice(0,cut));
+        tail=tail.slice(cut);
+        if(!firstPaint){
+          firstPaint=true;
+          try{ document.documentElement.classList.add('public-streaming'); }catch(e){}
+        }
+      }
+    }
+
+    tail+=decoder.decode();
+
+    /* Remove the exact route-level automatic scroll before that script executes. */
+    tail=tail.replace(
       /window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant' in window \? 'instant' : 'auto'\s*\}\);\s*/g,
       ''
     );
 
-    /* Never make the first paint wait for locale/rate network calls. */
-    html=html.replace(
-      /async function boot\(\)\{\s*bind\(\);\s*if\(!state\.manual\)\{\s*state\.country=await detectCountry\(\);\s*save\(\);\s*\}\s*await refreshRates\(\);\s*rerender\(\);/s,
-      `async function boot(){
-  bind();
-  rerender();
-  if(!state.manual){
-    detectCountry().then(country=>{
-      state.country=country;
-      save();
-      rerender();
-    }).catch(()=>{});
-  }
-  refreshRates().then(()=>rerender()).catch(()=>{});`
-    );
-
-    /* The fallback file is local and therefore needs the live Supabase runtime injected. */
-    if(!html.includes('221-luxury-supabase-runtime.js')){
-      const body=html.lastIndexOf('</body>');
-      if(body>=0){
-        html=html.slice(0,body)+`
-<script src="/supabase-config.js?v=public-build-2"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="/221-luxury-supabase-runtime.js?v=public-build-2"></script>
-`+html.slice(body);
-      }
-    }
-    return html;
-  }
-
-  async function fetchWithTimeout(url,ms){
-    const controller=new AbortController();
-    const timer=setTimeout(()=>controller.abort(),ms);
-    try{
-      const r=await fetch(url,{cache:'no-store',signal:controller.signal});
-      if(!r.ok) throw new Error('HTTP '+r.status);
-      return await r.text();
-    }finally{
-      clearTimeout(timer);
-    }
-  }
-
-  try{
-    let html;
-    try{
-      html=await fetchWithTimeout(RENDERER,5000);
-    }catch(rendererError){
-      console.warn('[221 LUXURY] live renderer unavailable, using local public fallback',rendererError);
-      html=await fetchWithTimeout(FALLBACK,15000);
+    /* The catalog runtime remains the live Supabase source of truth. */
+    const bodyIndex=tail.lastIndexOf('</body>');
+    if(bodyIndex>=0){
+      tail=tail.slice(0,bodyIndex)+RUNTIME+tail.slice(bodyIndex);
+    }else{
+      tail+=RUNTIME;
     }
 
-    html=prepare(html);
-    document.open();
-    document.write(html);
+    document.write(tail);
     document.close();
   }catch(error){
-    console.error('[221 LUXURY] public shell failed',error);
+    console.error('[221 LUXURY] streaming storefront failed',error);
+    try{document.close();}catch(e){}
     const el=document.getElementById('loader');
-    if(el) el.textContent='Impossible de charger 221 LUXURY.';
+    if(el) el.textContent=error&&error.name==='AbortError'
+      ? 'Le chargement de 221 LUXURY prend trop de temps. Veuillez actualiser.'
+      : 'Impossible de charger 221 LUXURY.';
   }
 })();
 </script>
