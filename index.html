@@ -6,27 +6,64 @@
   <title>221 LUXURY</title>
 </head>
 <body style="margin:0;background:#fff">
-<div id="loader" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#222">Chargement de 221 LUXURY…</div>
 <script>
 (async function(){
   'use strict';
+
+  const SOURCE='/static-index.html?v=public-progressive-6';
+  const KEEP=8192;
+  const RUNTIME=`
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>
+<script src="/221-luxury-supabase-runtime.js?v=public-progressive-6"><\/script>
+`;
+
   try{
-    // Load the public HTML shell directly from the same Vercel deployment.
-    // The live Supabase runtime inside that HTML remains the source of truth
-    // and refreshes the catalog after the page has painted.
-    const r=await fetch('/static-index.html?v=public-shell-1',{cache:'no-store'});
-    if(!r.ok) throw new Error('Static public source HTTP '+r.status);
-    const html=await r.text();
-    const runtimeTag='<script src="/supabase-config.js?v=public-shell-1"><\/script>\n<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>\n<script src="/221-luxury-supabase-runtime.js?v=public-shell-1"><\/script>';
-    const bodyIndex=html.lastIndexOf('</body>');
-    const out=bodyIndex>=0 ? html.slice(0,bodyIndex)+runtimeTag+'\n'+html.slice(bodyIndex) : html+runtimeTag;
+    const controller=new AbortController();
+    const timeout=setTimeout(function(){controller.abort();},30000);
+    const response=await fetch(SOURCE,{cache:'no-store',signal:controller.signal});
+    clearTimeout(timeout);
+    if(!response.ok) throw new Error('Static storefront HTTP '+response.status);
+    if(!response.body) throw new Error('Static storefront stream unavailable');
+
+    const reader=response.body.getReader();
+    const decoder=new TextDecoder();
+    let tail='';
+
     document.open();
-    document.write(out);
+
+    while(true){
+      const part=await reader.read();
+      if(part.done) break;
+      tail+=decoder.decode(part.value,{stream:true});
+
+      if(tail.length>KEEP){
+        const cut=tail.length-KEEP;
+        document.write(tail.slice(0,cut));
+        tail=tail.slice(cut);
+      }
+    }
+
+    tail+=decoder.decode();
+
+    /* Remove only the known automatic route-level scroll from the supplied storefront. */
+    tail=tail.replace(
+      /window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant' in window \? 'instant' : 'auto'\s*\}\);\s*/g,
+      ''
+    );
+
+    const bodyIndex=tail.lastIndexOf('</body>');
+    if(bodyIndex>=0){
+      tail=tail.slice(0,bodyIndex)+RUNTIME+tail.slice(bodyIndex);
+    }else{
+      tail+=RUNTIME;
+    }
+
+    document.write(tail);
     document.close();
   }catch(error){
-    console.error('[221 LUXURY] public shell failed',error);
-    const el=document.getElementById('loader');
-    if(el) el.textContent='Impossible de charger 221 LUXURY.';
+    console.error('[221 LUXURY] public storefront failed',error);
+    try{document.close();}catch(e){}
+    document.body.innerHTML='';
   }
 })();
 </script>
