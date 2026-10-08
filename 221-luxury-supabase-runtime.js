@@ -161,6 +161,10 @@
         if(document.getElementById('homeNouveautesGrid')){renderProductGrid('homeNouveautesGrid',novelty); if(typeof initProductCarousel==='function') initProductCarousel('homeNouveautesGrid');}
         if(document.getElementById('homeGrid')){renderProductGrid('homeGrid',PRODUCTS); if(typeof initProductCarousel==='function') initProductCarousel('homeGrid');}
         if(document.getElementById('bestsellersGrid')){renderProductGrid('bestsellersGrid',PRODUCTS); if(typeof initProductCarousel==='function') initProductCarousel('bestsellersGrid');}
+        ['homeNouveautesGrid','homeGrid','bestsellersGrid','shopGrid'].forEach(function(id){
+          const root=document.getElementById(id);
+          if(root && root.children.length) root.querySelectorAll('.product-card.reveal').forEach(function(card){card.classList.add('is-visible');});
+        });
       }
       if(typeof applyShopFilters==='function' && typeof shopState!=='undefined' && document.getElementById('shopGrid')) applyShopFilters();
       prioritizeAboveFoldMedia();
@@ -187,9 +191,11 @@
     if(!storeResult.data){ console.warn('221 LUXURY: store not created yet; keeping current catalog.'); return; }
 
     const PAGE_SIZE=4;
+    const liveRefresh=document.documentElement.dataset.supabaseCatalog==='ready';
     let offset=0;
     let firstBatch=true;
     let lastBatchSize=0;
+    const nextProducts=[];
 
     do{
       const result=await client
@@ -208,24 +214,32 @@
       const batch=(result.data||[]).map(function(row){return normalize(row,client);});
       lastBatchSize=batch.length;
 
-      const previousBatch=PRODUCTS.slice(offset,offset+batch.length);
-      const batchChanged=JSON.stringify(previousBatch)!==JSON.stringify(batch);
-      const catalogWasEmpty=firstBatch && PRODUCTS.length===0;
+      if(liveRefresh){
+        nextProducts.push(...batch);
+      }else{
+        if(firstBatch){
+          PRODUCTS.splice(0,PRODUCTS.length,...batch);
+          firstBatch=false;
+        }else if(batch.length){
+          PRODUCTS.push(...batch);
+        }
 
-      if(firstBatch){
-        PRODUCTS.splice(0,PRODUCTS.length,...batch);
-        firstBatch=false;
-      }else if(batch.length){
-        PRODUCTS.push(...batch);
-      }
-
-      if(batch.length && (catalogWasEmpty || batchChanged)){
-        repaint();
-        await new Promise(function(resolve){setTimeout(resolve,0);});
+        if(batch.length){
+          repaint();
+          await new Promise(function(resolve){setTimeout(resolve,0);});
+        }
       }
 
       offset+=batch.length;
     }while(lastBatchSize===PAGE_SIZE);
+
+    if(liveRefresh){
+      const changed=JSON.stringify(PRODUCTS)!==JSON.stringify(nextProducts);
+      if(changed){
+        PRODUCTS.splice(0,PRODUCTS.length,...nextProducts);
+        repaint();
+      }
+    }
 
     document.documentElement.dataset.supabaseCatalog='ready';
     return PRODUCTS.slice();
