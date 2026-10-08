@@ -208,6 +208,10 @@
       const batch=(result.data||[]).map(function(row){return normalize(row,client);});
       lastBatchSize=batch.length;
 
+      const previousBatch=PRODUCTS.slice(offset,offset+batch.length);
+      const batchChanged=JSON.stringify(previousBatch)!==JSON.stringify(batch);
+      const catalogWasEmpty=firstBatch && PRODUCTS.length===0;
+
       if(firstBatch){
         PRODUCTS.splice(0,PRODUCTS.length,...batch);
         firstBatch=false;
@@ -215,7 +219,7 @@
         PRODUCTS.push(...batch);
       }
 
-      if(batch.length){
+      if(batch.length && (catalogWasEmpty || batchChanged)){
         repaint();
         await new Promise(function(resolve){setTimeout(resolve,0);});
       }
