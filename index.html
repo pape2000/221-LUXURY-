@@ -4,66 +4,40 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>221 LUXURY</title>
+  <style>
+    html,body{margin:0;width:100%;min-height:100%;background:#fff}
+    #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;font:600 14px/1.4 system-ui,sans-serif;color:#222;z-index:10}
+  </style>
 </head>
-<body style="margin:0;background:#fff">
+<body>
+<div id="loader">Chargement de 221 LUXURY…</div>
 <script>
 (async function(){
   'use strict';
 
-  const SOURCE='/static-index.html?v=public-progressive-6';
-  const KEEP=8192;
-  const RUNTIME=`
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>
-<script src="/221-luxury-supabase-runtime.js?v=public-progressive-6"><\/script>
-`;
+  const SOURCE='https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury?v=live-8';
 
   try{
     const controller=new AbortController();
-    const timeout=setTimeout(function(){controller.abort();},30000);
+    const timeout=setTimeout(function(){controller.abort();},15000);
     const response=await fetch(SOURCE,{cache:'no-store',signal:controller.signal});
     clearTimeout(timeout);
-    if(!response.ok) throw new Error('Static storefront HTTP '+response.status);
-    if(!response.body) throw new Error('Static storefront stream unavailable');
+    if(!response.ok) throw new Error('Public storefront HTTP '+response.status);
 
-    const reader=response.body.getReader();
-    const decoder=new TextDecoder();
-    let tail='';
+    const html=await response.text();
 
-    document.open();
-
-    while(true){
-      const part=await reader.read();
-      if(part.done) break;
-      tail+=decoder.decode(part.value,{stream:true});
-
-      if(tail.length>KEEP){
-        const cut=tail.length-KEEP;
-        document.write(tail.slice(0,cut));
-        tail=tail.slice(cut);
-      }
-    }
-
-    tail+=decoder.decode();
-
-    /* Remove only the known automatic route-level scroll from the supplied storefront. */
-    tail=tail.replace(
-      /window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant' in window \? 'instant' : 'auto'\s*\}\);\s*/g,
+    const cleaned=html.replace(
+      /window\\.scrollTo\\(\\{\\s*top:\\s*0,\\s*behavior:\\s*'instant' in window \\? 'instant' : 'auto'\\s*\\}\\);\\s*/g,
       ''
     );
 
-    const bodyIndex=tail.lastIndexOf('</body>');
-    if(bodyIndex>=0){
-      tail=tail.slice(0,bodyIndex)+RUNTIME+tail.slice(bodyIndex);
-    }else{
-      tail+=RUNTIME;
-    }
-
-    document.write(tail);
+    document.open();
+    document.write(cleaned);
     document.close();
   }catch(error){
     console.error('[221 LUXURY] public storefront failed',error);
-    try{document.close();}catch(e){}
-    document.body.innerHTML='';
+    const el=document.getElementById('loader');
+    if(el) el.textContent='Impossible de charger 221 LUXURY.';
   }
 })();
 </script>
