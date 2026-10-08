@@ -1,26 +1,40 @@
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>221 LUXURY</title>
-<meta name="robots" content="index,follow">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>221 LUXURY</title>
+  <meta name="robots" content="index,follow">
 </head>
 <body style="margin:0;background:#fff">
 <div id="221luxury-live-loader" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#222">Chargement de 221 LUXURY…</div>
 <script>
 (async function(){
+  'use strict';
   try{
-    const r=await fetch('https://shvgcroqovnhltpzceid.supabase.co/functions/v1/public-221-luxury?v=live-final-2',{cache:'no-store'});
-    if(!r.ok) throw new Error('Renderer HTTP '+r.status);
-    const html=await r.text();
+    const controller=new AbortController();
+    const timeout=setTimeout(()=>controller.abort(),12000);
+    const r=await fetch('/static-index.html?v=public-shell-3',{cache:'no-store',signal:controller.signal});
+    clearTimeout(timeout);
+    if(!r.ok) throw new Error('Static storefront HTTP '+r.status);
+    let html=await r.text();
+
+    /* Exterminate the automatic route scroll. */
+    html=html.replace(/\s*window\.scrollTo\(\{\s*top:\s*0,\s*behavior:\s*'instant'\s*in\s*window\s*\?\s*'instant'\s*:\s*'auto'\s*\}\);\s*/,'\n');
+
+    /* Supabase remains the source of truth; its catalog runtime starts after the page is rendered. */
+    const runtime='<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>\n<script src="/221-luxury-supabase-runtime.js?v=public-progressive-3"><\/script>';
+    html=html.replace('</body>',runtime+'\n</body>');
+
     document.open();
     document.write(html);
     document.close();
   }catch(error){
-    console.error('[221 LUXURY] live renderer failed',error);
+    console.error('[221 LUXURY] storefront bootstrap failed',error);
     const el=document.getElementById('221luxury-live-loader');
-    if(el) el.textContent='Impossible de charger 221 LUXURY.';
+    if(el) el.textContent=error&&error.name==='AbortError'
+      ? 'Le chargement de 221 LUXURY prend trop de temps. Veuillez actualiser.'
+      : 'Impossible de charger 221 LUXURY.';
   }
 })();
 </script>
