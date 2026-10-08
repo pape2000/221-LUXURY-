@@ -19,11 +19,10 @@ export default async function handler(req, res) {
     let buffer = '';
     let injected = false;
 
-    const injection = `
-<script>
-window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};
+    const prelude = `<script>window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};(function(){const native=window.scrollTo;window.scrollTo=function(x,y){if(typeof x==='object'&&x&&Number(x.top)===0)return;if(typeof x==='number'&&Number(x)===0&&Number(y)===0)return;return native.apply(this,arguments);};})();<\/script>`;
+
+    const injection = `<script>
 (function(){
-  const native=window.scrollTo;
   window.scrollTo=function(x,y){
     if(typeof x==='object'&&x&&Number(x.top)===0)return;
     if(typeof x==='number'&&Number(x)===0&&Number(y)===0)return;
@@ -54,7 +53,7 @@ window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};
           continue;
         }
 
-        res.write(buffer.slice(0, index) + injection + buffer.slice(index));
+        res.write(prelude + buffer.slice(0, index) + injection + buffer.slice(index));
         buffer = '';
         injected = true;
       } else {
