@@ -4,27 +4,75 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>221 LUXURY</title>
+  <style>
+    html,body{margin:0;width:100%;min-height:100%;background:#fff}
+    #loader{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:#fff;font:600 14px/1.4 system-ui,sans-serif;color:#222;z-index:10}
+  </style>
 </head>
-<body style="margin:0;background:#fff">
-<div id="loader" style="min-height:100vh;display:flex;align-items:center;justify-content:center;font:600 14px system-ui;color:#222">Chargement de 221 LUXURY…</div>
+<body>
+<div id="loader">Chargement de 221 LUXURY…</div>
 <script>
 (async function(){
   'use strict';
+
+  const STATIC_SOURCE='/static-index.html';
+  const RUNTIME_TAG='<script src="/221-luxury-supabase-runtime.js?v=live-final-2"><\/script>';
+  const CONFIG_TAG='<script src="/supabase-config.js?v=live-final"><\/script>';
+  const BOOTSTRAP=[
+    '<script>',
+    "window.handleFirebaseRedirect=window.handleFirebaseRedirect||function(){};",
+    "(function(){const native=window.scrollTo;window.scrollTo=function(x,y){if(typeof x==='object'&&x&&Number(x.top)===0)return;if(typeof x==='number'&&Number(x)===0&&Number(y)===0)return;return native.apply(this,arguments);};})();",
+    '<\/script>',
+    CONFIG_TAG,
+    RUNTIME_TAG
+  ].join('\n');
+
   try{
-    // Load the public HTML shell directly from the same Vercel deployment.
-    // The live Supabase runtime inside that HTML remains the source of truth
-    // and refreshes the catalog after the page has painted.
-    const r=await fetch('/static-index.html?v=public-shell-1',{cache:'no-store'});
-    if(!r.ok) throw new Error('Static public source HTTP '+r.status);
-    const html=await r.text();
-    const runtimeTag='<script src="/supabase-config.js?v=public-shell-1"><\/script>\n<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"><\/script>\n<script src="/221-luxury-supabase-runtime.js?v=public-shell-1"><\/script>';
-    const bodyIndex=html.lastIndexOf('</body>');
-    const out=bodyIndex>=0 ? html.slice(0,bodyIndex)+runtimeTag+'\n'+html.slice(bodyIndex) : html+runtimeTag;
-    document.open();
-    document.write(out);
+    const response=await fetch(STATIC_SOURCE,{cache:'no-store'});
+    if(!response.ok) throw new Error('Static storefront HTTP '+response.status);
+    if(!response.body) throw new Error('Static storefront stream unavailable');
+
+    const reader=response.body.getReader();
+    const decoder=new TextDecoder();
+    let buffer='';
+    let started=false;
+    let opened=false;
+
+    function write(value){
+      if(!opened){ document.open(); opened=true; }
+      document.write(value);
+    }
+
+    while(true){
+      const part=await reader.read();
+      if(part.done) break;
+      buffer+=decoder.decode(part.value,{stream:true});
+
+      if(!started){
+        const marker='</head>';
+        const i=buffer.indexOf(marker);
+        if(i===-1){
+          if(buffer.length>262144){
+            write(buffer);
+            buffer='';
+          }
+          continue;
+        }
+        write(buffer.slice(0,i)+BOOTSTRAP+buffer.slice(i));
+        buffer='';
+        started=true;
+      }else{
+        write(buffer);
+        buffer='';
+      }
+    }
+
+    buffer+=decoder.decode();
+    if(buffer) write(buffer);
+    if(!started && buffer) throw new Error('HEAD marker not found in storefront');
     document.close();
   }catch(error){
-    console.error('[221 LUXURY] public shell failed',error);
+    console.error('[221 LUXURY] public storefront stream failed',error);
     const el=document.getElementById('loader');
     if(el) el.textContent='Impossible de charger 221 LUXURY.';
   }
